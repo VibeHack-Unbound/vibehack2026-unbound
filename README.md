@@ -25,7 +25,7 @@ Staging:
 
 ## Quick Start
 
-This repo uses [mise](https://mise.jdx.dev/installing-mise.html) for runtime setup. `mise.toml` pins Node `26`, and `package.json` pins pnpm `11.1.2`.
+This repo uses [mise](https://mise.jdx.dev/installing-mise.html).
 
 Install mise and let its installer add shell activation for zsh:
 
