@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createFileRoute, useSearch } from '@tanstack/react-router'
-import { BottomNav } from '../components/BottomNav'
-import { CatIllustration } from '../components/CatIllustration'
 import { PhoneShell } from '../components/PhoneShell'
+import { AppHeader } from '../components/AppHeader'
+import { FloatingAIButton } from '../components/FloatingAIButton'
+import { CatIllustration } from '../components/CatIllustration'
+import { CatAgentOverlay } from '../components/CatAgentOverlay'
 import { MEI_DATA, getEntryByDate } from '../lib/meiData'
 import type { DayEntry } from '../lib/meiData'
 import { TIERS, scoreToTier } from '../lib/tierSystem'
 
-// Route supports ?open=YYYY-MM-DD so the Today tab can deep-link to today's sheet
 export const Route = createFileRoute('/calendar')({
   validateSearch: (search: Record<string, unknown>) => ({
     open: typeof search.open === 'string' ? search.open : undefined,
@@ -19,17 +20,8 @@ const MONTH_NAMES = [
   'january','february','march','april','may','june',
   'july','august','september','october','november','december',
 ]
-const DAY_HEADERS = ['sun','mon','tue','wed','thu','fri','sat']
+const DAY_HEADERS = ['su','mo','tu','we','th','fr','sa']
 
-function getDaysInMonth(year: number, month: number) {
-  return new Date(year, month + 1, 0).getDate()
-}
-
-function getFirstDayOfMonth(year: number, month: number) {
-  return new Date(year, month, 1).getDay()
-}
-
-// ── Check-in questions (shared with today tab) ────────────────────────────
 const CHECKIN_QUESTIONS = [
   { id: 'ate',    q: 'did you eat today?',                options: ['nothing', 'snacked only', 'at least 2 meals'] },
   { id: 'energy', q: 'how is your energy right now?',     options: ['stuck in bed', 'getting by', 'normal', 'feeling good'] },
@@ -38,13 +30,13 @@ const CHECKIN_QUESTIONS = [
   { id: 'focus',  q: 'could you focus on anything today?',options: ['completely blank', 'some focus', 'fully focused'] },
   { id: 'overall',q: 'how would you describe today overall?', options: ['very hard', 'hard', 'okay', 'good', 'really good'] },
 ]
-const STRESS_TAGS = ['exams', 'family', 'loneliness', 'money', 'health', 'other']
 
-// ── Sheet mode ────────────────────────────────────────────────────────────
 type SheetState =
   | { mode: 'view'; entry: DayEntry }
   | { mode: 'input'; date: string; existing: DayEntry | null }
   | null
+
+type TimeRange = '7d' | '30d' | '3m'
 
 function CalendarPage() {
   const today = new Date()
@@ -54,17 +46,109 @@ function CalendarPage() {
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
   const [sheet, setSheet] = useState<SheetState>(null)
+  const [agentOpen, setAgentOpen] = useState(false)
+  const [timeRange, setTimeRange] = useState<TimeRange>('7d')
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  // If navigated here with ?open=YYYY-MM-DD, auto-open that day's sheet
   useEffect(() => {
     if (open) {
-      const existing = getEntryByDate(open)
-      setSheet({ mode: 'input', date: open, existing: existing ?? null })
+      const existing = getEntryByDate(open) ?? null
+      setSheet({ mode: 'input', date: open, existing })
     }
   }, [open])
 
-  const daysInMonth = getDaysInMonth(viewYear, viewMonth)
-  const firstDay = getFirstDayOfMonth(viewYear, viewMonth)
+  // Draw mood line graph
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const dpr = window.devicePixelRatio || 1
+    const W = canvas.offsetWidth
+    const H = canvas.offsetHeight
+    canvas.width = W * dpr
+    canvas.height = H * dpr
+    ctx.scale(dpr, dpr)
+
+    // Filter data by time range
+    const now = new Date()
+    const cutoff = new Date(now)
+    if (timeRange === '7d') cutoff.setDate(now.getDate() - 7)
+    else if (timeRange === '30d') cutoff.setDate(now.getDate() - 30)
+    else cutoff.setMonth(now.getMonth() - 3)
+    const cutoffStr = cutoff.toISOString().slice(0, 10)
+    const data = MEI_DATA.filter(e => e.date >= cutoffStr).sort((a, b) => a.date.localeCompare(b.date))
+
+    if (data.length < 2) {
+      ctx.fillStyle = '#A89F94'
+      ctx.font = '12px Montserrat, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('not enough data for this range', W / 2, H / 2)
+      return
+    }
+
+    const pad = { top: 10, right: 10, bottom: 24, left: 28 }
+    const gW = W - pad.left - pad.right
+    const gH = H - pad.top - pad.bottom
+
+    // Y-axis grid lines
+    ctx.strokeStyle = '#EAE4DA'
+    ctx.lineWidth = 1
+    ;[0, 25, 50, 75, 100].forEach(v => {
+      const y = pad.top + gH - (v / 100) * gH
+      ctx.beginPath()
+      ctx.moveTo(pad.left, y)
+      ctx.lineTo(pad.left + gW, y)
+      ctx.stroke()
+      ctx.fillStyle = '#A89F94'
+      ctx.font = `9px Montserrat, sans-serif`
+      ctx.textAlign = 'right'
+      ctx.fillText(String(v), pad.left - 4, y + 3)
+    })
+
+    // Build gradient line segments by tier colour
+    const pts = data.map((e, i) => ({
+      x: pad.left + (i / (data.length - 1)) * gW,
+      y: pad.top + gH - (e.score / 100) * gH,
+      colour: TIERS[scoreToTier(e.score)].colour,
+    }))
+
+    // Draw filled area under line
+    ctx.beginPath()
+    ctx.moveTo(pts[0].x, pad.top + gH)
+    pts.forEach(p => ctx.lineTo(p.x, p.y))
+    ctx.lineTo(pts[pts.length - 1].x, pad.top + gH)
+    ctx.closePath()
+    const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + gH)
+    grad.addColorStop(0, 'rgb(128 176 232 / 22%)')
+    grad.addColorStop(1, 'rgb(128 176 232 / 0%)')
+    ctx.fillStyle = grad
+    ctx.fill()
+
+    // Draw line segments coloured by tier
+    for (let i = 0; i < pts.length - 1; i++) {
+      ctx.beginPath()
+      ctx.moveTo(pts[i].x, pts[i].y)
+      ctx.lineTo(pts[i + 1].x, pts[i + 1].y)
+      ctx.strokeStyle = pts[i].colour
+      ctx.lineWidth = 2.5
+      ctx.lineJoin = 'round'
+      ctx.lineCap = 'round'
+      ctx.stroke()
+    }
+
+    // Draw dots
+    pts.forEach(p => {
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2)
+      ctx.fillStyle = p.colour
+      ctx.fill()
+      ctx.strokeStyle = '#FAF6F0'
+      ctx.lineWidth = 1.5
+      ctx.stroke()
+    })
+  }, [timeRange])
 
   function prevMonth() {
     if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1) }
@@ -79,40 +163,35 @@ function CalendarPage() {
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     const isToday = dateStr === todayStr
     const entry = getEntryByDate(dateStr)
-
     if (isToday) {
-      // Today: always open input/edit sheet
       setSheet({ mode: 'input', date: dateStr, existing: entry ?? null })
     } else if (entry) {
-      // Past day with entry: open view sheet
       setSheet({ mode: 'view', entry })
     }
-    // Future days or past days with no entry: do nothing
   }
 
-  function getCellStyle(day: number) {
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay()
+  const cells: Array<{ type: 'empty' } | { type: 'day'; day: number }> = []
+  for (let i = 0; i < firstDay; i++) cells.push({ type: 'empty' })
+  for (let d = 1; d <= daysInMonth; d++) cells.push({ type: 'day', day: d })
+
+  function getCellProps(day: number) {
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     const entry = getEntryByDate(dateStr)
     const isToday = dateStr === todayStr
     const isFuture = dateStr > todayStr
     if (entry) {
       const t = scoreToTier(entry.score)
-      return { background: TIERS[t].colour, color: '#2C3E35', isToday, hasEntry: true, isClickable: true, isFuture: false }
+      return { bg: TIERS[t].colour, textColor: '#2C3E35', isToday, clickable: true, isFuture: false }
     }
-    if (isToday) {
-      // Today with no entry: show as interactive with a "+" hint
-      return { background: '#E8E8E8', color: '#A89F94', isToday: true, hasEntry: false, isClickable: true, isFuture: false }
-    }
-    return { background: '#E8E8E8', color: '#C8C8C8', isToday: false, hasEntry: false, isClickable: false, isFuture: isFuture }
+    if (isToday) return { bg: '#E8E8E8', textColor: '#A89F94', isToday: true, clickable: true, isFuture: false }
+    return { bg: '#E8E8E8', textColor: isFuture ? '#D0C8C0' : '#B0A898', isToday: false, clickable: false, isFuture }
   }
 
-  // Build grid: empty cells + day cells
-  const cells: Array<{ type: 'empty' } | { type: 'day'; day: number }> = []
-  for (let i = 0; i < firstDay; i++) cells.push({ type: 'empty' })
-  for (let d = 1; d <= daysInMonth; d++) cells.push({ type: 'day', day: d })
-
   return (
-    <PhoneShell withNav>
+    <PhoneShell>
+      <AppHeader />
       <div className="screen calendar-screen page-enter">
         <header>
           <h1 className="page-title">calendar</h1>
@@ -126,82 +205,76 @@ function CalendarPage() {
           <button className="month-nav-btn" onClick={nextMonth} aria-label="next month">›</button>
         </div>
 
-        {/* Day headers + grid */}
-        <div className="calendar-grid">
+        {/* Circle grid */}
+        <div className="calendar-circle-grid">
           {DAY_HEADERS.map(d => (
             <div key={d} className="calendar-day-header">{d}</div>
           ))}
           {cells.map((cell, i) => {
-            if (cell.type === 'empty') {
-              return <div key={`e-${i}`} className="cal-cell empty" />
-            }
-            const style = getCellStyle(cell.day)
+            if (cell.type === 'empty') return <div key={`e-${i}`} className="cal-circle empty" />
+            const props = getCellProps(cell.day)
+            const classes = [
+              'cal-circle',
+              props.clickable ? 'has-entry' : 'no-entry',
+              props.isToday ? 'is-today' : '',
+            ].filter(Boolean).join(' ')
             return (
               <div
                 key={cell.day}
-                className={[
-                  'cal-cell',
-                  style.isToday ? 'today' : '',
-                  !style.hasEntry ? 'no-entry' : '',
-                  style.isClickable ? 'clickable' : '',
-                ].filter(Boolean).join(' ')}
-                style={{ background: style.background, color: style.color }}
-                onClick={style.isClickable ? () => handleDayClick(cell.day) : undefined}
-                role={style.isClickable ? 'button' : undefined}
-                tabIndex={style.isClickable ? 0 : undefined}
-                onKeyDown={style.isClickable ? (e) => e.key === 'Enter' && handleDayClick(cell.day) : undefined}
-                aria-label={style.isToday && !style.hasEntry ? `${cell.day} — tap to log today` : undefined}
+                className={classes}
+                style={{ background: props.bg, color: props.textColor }}
+                onClick={props.clickable ? () => handleDayClick(cell.day) : undefined}
+                role={props.clickable ? 'button' : undefined}
+                tabIndex={props.clickable ? 0 : undefined}
+                onKeyDown={props.clickable ? (e) => e.key === 'Enter' && handleDayClick(cell.day) : undefined}
               >
                 {cell.day}
-                {style.isToday && !style.hasEntry && (
-                  <span className="cal-today-plus">+</span>
-                )}
               </div>
             )
           })}
         </div>
 
-        {/* Legend */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {([1,2,3,4,5] as const).map(t => (
-            <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', color: 'var(--muted)', fontWeight: 600 }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, background: TIERS[t].colour }} />
-              {TIERS[t].label}
+        {/* Mood graph */}
+        <div className="mood-graph-section">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span className="section-label">mood over time</span>
+            <div className="mood-graph-toggles">
+              {(['7d', '30d', '3m'] as TimeRange[]).map(r => (
+                <button
+                  key={r}
+                  className={`mood-toggle-btn${timeRange === r ? ' active' : ''}`}
+                  onClick={() => setTimeRange(r)}
+                  type="button"
+                >
+                  {r}
+                </button>
+              ))}
             </div>
-          ))}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', color: 'var(--muted)', fontWeight: 600 }}>
-            <div style={{ width: 12, height: 12, borderRadius: 3, background: '#E8E8E8' }} />
-            no entry
           </div>
-        </div>
-
-        {/* Logged days count */}
-        <div style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--muted)', fontWeight: 600 }}>
-          {MEI_DATA.length} days logged
+          <div className="mood-graph-canvas-wrap">
+            <canvas ref={canvasRef} style={{ width: '100%', height: '140px', display: 'block' }} />
+          </div>
         </div>
       </div>
 
-      {/* Sheet: view mode (past entries) */}
+      {/* View sheet */}
       {sheet?.mode === 'view' && (
         <DayDetailSheet entry={sheet.entry} onClose={() => setSheet(null)} />
       )}
 
-      {/* Sheet: input/edit mode (today) */}
+      {/* Check-in sheet */}
       {sheet?.mode === 'input' && (
-        <CheckInSheet
-          date={sheet.date}
-          existing={sheet.existing}
-          onClose={() => setSheet(null)}
-        />
+        <CheckInSheet date={sheet.date} existing={sheet.existing} onClose={() => setSheet(null)} />
       )}
 
-      <BottomNav />
+      <FloatingAIButton onClick={() => setAgentOpen(true)} />
+      {agentOpen && <CatAgentOverlay onClose={() => setAgentOpen(false)} />}
     </PhoneShell>
   )
 }
 
-// ── View sheet (past entries) ─────────────────────────────────────────────
-const VIEW_CHECKIN_QUESTIONS = [
+// ── View sheet ────────────────────────────────────────────────────────────
+const VIEW_QUESTIONS = [
   { key: 'ate',    q: 'did you eat today?' },
   { key: 'energy', q: 'how is your energy?' },
   { key: 'sleep',  q: 'how did you sleep?' },
@@ -220,40 +293,30 @@ function DayDetailSheet({ entry, onClose }: { entry: DayEntry; onClose: () => vo
     <div className="sheet-overlay" onClick={onClose}>
       <div className="sheet-panel" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
-
         <div className="sheet-header">
           <div>
             <h3 style={{ fontSize: '0.95rem', color: 'var(--fg)' }}>{dateLabel}</h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-              <span
-                className="day-tier-badge"
-                style={{ background: `${tierInfo.colour}33`, border: `1.5px solid ${tierInfo.colour}` }}
-              >
+              <span className="day-tier-badge" style={{ background: `${tierInfo.colour}33`, border: `1.5px solid ${tierInfo.colour}` }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: tierInfo.colour, display: 'inline-block' }} />
                 {tierInfo.label}
               </span>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: tierInfo.colour }}>
-                {entry.score}/100
-              </span>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: tierInfo.colour }}>{entry.score}/100</span>
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <CatIllustration tier={tier} size={60} className="" />
+            <CatIllustration tier={tier} size={56} className="" />
             <button className="sheet-close" onClick={onClose} aria-label="close">✕</button>
           </div>
         </div>
-
-        {/* Voice transcript */}
         <div>
           <span className="section-label" style={{ display: 'block', marginBottom: 6 }}>voice journal</span>
           <div className="voice-summary">{entry.voiceSummary}</div>
         </div>
-
-        {/* Check-in answers */}
         <div>
           <span className="section-label" style={{ display: 'block', marginBottom: 8 }}>check-in</span>
           <div className="checkin-answers">
-            {VIEW_CHECKIN_QUESTIONS.map(({ key, q }) => (
+            {VIEW_QUESTIONS.map(({ key, q }) => (
               <div key={key} className="checkin-row">
                 <span className="checkin-q">{q}</span>
                 <div className="checkin-chips">
@@ -263,15 +326,11 @@ function DayDetailSheet({ entry, onClose }: { entry: DayEntry; onClose: () => vo
             ))}
           </div>
         </div>
-
-        {/* Stress tags */}
         {entry.stressTags.length > 0 && (
           <div>
             <span className="section-label" style={{ display: 'block', marginBottom: 6 }}>stress sources</span>
             <div className="stress-tags">
-              {entry.stressTags.map(tag => (
-                <span key={tag} className="stress-tag">{tag}</span>
-              ))}
+              {entry.stressTags.map(tag => <span key={tag} className="stress-tag">{tag}</span>)}
             </div>
           </div>
         )}
@@ -280,80 +339,33 @@ function DayDetailSheet({ entry, onClose }: { entry: DayEntry; onClose: () => vo
   )
 }
 
-// ── Check-in input sheet (today's entry) ─────────────────────────────────
-function CheckInSheet({ date, existing, onClose }: {
-  date: string
-  existing: DayEntry | null
-  onClose: () => void
-}) {
+// ── Check-in input sheet ──────────────────────────────────────────────────
+function CheckInSheet({ date, existing, onClose }: { date: string; existing: DayEntry | null; onClose: () => void }) {
   const d = new Date(date)
-  const dateLabel = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).toLowerCase()
   const isToday = date === new Date().toISOString().slice(0, 10)
-
-  const [answers, setAnswers] = useState<Record<string, string>>(
-    existing ? { ...existing.checkIn } : {}
-  )
-  const [selectedStress, setSelectedStress] = useState<string[]>(
-    existing ? [...existing.stressTags] : []
-  )
+  const dateLabel = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).toLowerCase()
+  const [answers, setAnswers] = useState<Record<string, string>>(existing ? { ...existing.checkIn } : {})
   const [submitted, setSubmitted] = useState(false)
-
-  function setAnswer(id: string, value: string) {
-    setAnswers(prev => ({ ...prev, [id]: value }))
-  }
-
-  function toggleStress(tag: string) {
-    setSelectedStress(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    )
-  }
-
   const allAnswered = CHECKIN_QUESTIONS.every(q => answers[q.id])
 
   function handleSave() {
     setSubmitted(true)
-    // In a real app this would persist; for the prototype we just close after a beat
-    setTimeout(() => onClose(), 900)
+    setTimeout(() => onClose(), 800)
   }
 
   return (
     <div className="sheet-overlay" onClick={onClose}>
-      <div className="sheet-panel sheet-panel-tall" onClick={(e) => e.stopPropagation()}>
+      <div className="sheet-panel" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
-
-        {/* Header */}
         <div className="sheet-header">
           <div>
-            <h3 style={{ fontSize: '0.95rem', color: 'var(--fg)' }}>
-              {isToday ? "today's check-in" : dateLabel}
-            </h3>
+            <h3 style={{ fontSize: '0.95rem', color: 'var(--fg)' }}>{isToday ? "today's check-in" : dateLabel}</h3>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: '4px 0 0', fontWeight: 600 }}>
               {existing ? 'edit your entry' : 'log how you are feeling'}
             </p>
           </div>
           <button className="sheet-close" onClick={onClose} aria-label="close">✕</button>
         </div>
-
-        {/* Stress tags */}
-        <div>
-          <span className="section-label" style={{ display: 'block', marginBottom: 8 }}>
-            what's been on your mind?
-          </span>
-          <div className="stress-chips-row">
-            {STRESS_TAGS.map(tag => (
-              <button
-                key={tag}
-                className={`stress-chip-btn${selectedStress.includes(tag) ? ' selected' : ''}`}
-                onClick={() => toggleStress(tag)}
-                type="button"
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Check-in questions */}
         <div className="checkin-section">
           {CHECKIN_QUESTIONS.map(({ id, q, options }) => (
             <div key={id} className="checkin-question">
@@ -363,7 +375,7 @@ function CheckInSheet({ date, existing, onClose }: {
                   <button
                     key={opt}
                     className={`answer-chip${answers[id] === opt ? ' selected' : ''}`}
-                    onClick={() => setAnswer(id, opt)}
+                    onClick={() => setAnswers(prev => ({ ...prev, [id]: opt }))}
                     type="button"
                   >
                     {opt}
@@ -373,14 +385,12 @@ function CheckInSheet({ date, existing, onClose }: {
             </div>
           ))}
         </div>
-
-        {/* Save button */}
         <button
           className="btn-primary"
           onClick={handleSave}
           disabled={!allAnswered || submitted}
           type="button"
-          style={{ opacity: allAnswered ? 1 : 0.5, marginTop: 4 }}
+          style={{ opacity: allAnswered ? 1 : 0.5 }}
         >
           {submitted ? '✓ saved!' : existing ? 'update entry' : "save today's entry"}
         </button>
