@@ -30,7 +30,7 @@ export const MEI_DATA: DayEntry[] = [
     tier: 2,
     score: 65,
     voiceSummary:
-      'mei talked about settling into her new flat in hackney. she mentioned feeling excited but a little overwhelmed by the paperwork. she said she missed her mum\'s cooking.',
+      "mei talked about settling into her new flat in hackney. she mentioned feeling excited but a little overwhelmed by the paperwork. she said she missed her mum's cooking.",
     stressTags: ['loneliness', 'other'],
     checkIn: {
       ate: 'at least 2 meals',
@@ -78,7 +78,7 @@ export const MEI_DATA: DayEntry[] = [
     tier: 4,
     score: 28,
     voiceSummary:
-      'mei received a confusing letter about her student visa and spent hours trying to understand it. she felt anxious and couldn\'t eat properly. she mentioned feeling very alone.',
+      "mei received a confusing letter about her student visa and spent hours trying to understand it. she felt anxious and couldn't eat properly. she mentioned feeling very alone.",
     stressTags: ['other', 'loneliness', 'money'],
     checkIn: {
       ate: 'nothing',
@@ -110,7 +110,7 @@ export const MEI_DATA: DayEntry[] = [
     tier: 2,
     score: 68,
     voiceSummary:
-      'mei went to the library and got a lot done on her essay. she treated herself to bubble tea. she said she\'s starting to feel like london might actually be okay.',
+      "mei went to the library and got a lot done on her essay. she treated herself to bubble tea. she said she's starting to feel like london might actually be okay.",
     stressTags: ['exams'],
     checkIn: {
       ate: 'at least 2 meals',

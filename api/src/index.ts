@@ -24,7 +24,7 @@ type RequestContext = {
 
 const app = new OpenAPIHono<{ Bindings: Bindings }>()
 
-const DEEPGRAM_STREAM_URL = 'wss://api.deepgram.com/v1/listen'
+const DEEPGRAM_STREAM_URL = 'https://api.deepgram.com/v1/listen'
 
 const deepgramDictationUrl = () => {
   const url = new URL(DEEPGRAM_STREAM_URL)
@@ -57,12 +57,20 @@ const sendSocketJson = (socket: WebSocket, payload: unknown) => {
   }
 }
 
-const sendSocketData = (socket: WebSocket, data: unknown) => {
+const sendSocketData = async (socket: WebSocket, data: unknown) => {
   if (!isSocketOpen(socket)) return
 
   if (typeof data === 'string' || data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
     socket.send(data)
+    return
   }
+
+  if (data instanceof Blob) {
+    socket.send(await data.arrayBuffer())
+    return
+  }
+
+  throw new Error(`Unsupported WebSocket message payload: ${Object.prototype.toString.call(data)}`)
 }
 
 const toErrorMessage = (error: unknown) =>
@@ -92,7 +100,14 @@ const proxyDeepgramDictation = async (request: Request, apiKey: string) => {
 
   browserSocket.addEventListener('message', (event) => {
     try {
-      sendSocketData(deepgramSocket, event.data)
+      void sendSocketData(deepgramSocket, event.data).catch((error: unknown) => {
+        sendSocketJson(browserSocket, {
+          type: 'ProxyError',
+          error: toErrorMessage(error),
+        })
+        closeSocket(browserSocket, 1011, 'Failed to forward audio')
+        closeSocket(deepgramSocket, 1011, 'Failed to forward audio')
+      })
     } catch (error) {
       sendSocketJson(browserSocket, {
         type: 'ProxyError',
@@ -105,7 +120,11 @@ const proxyDeepgramDictation = async (request: Request, apiKey: string) => {
 
   deepgramSocket.addEventListener('message', (event) => {
     try {
-      sendSocketData(browserSocket, event.data)
+      void sendSocketData(browserSocket, event.data).catch((error: unknown) => {
+        console.error('Failed to forward Deepgram message', error)
+        closeSocket(browserSocket, 1011, 'Failed to forward transcript')
+        closeSocket(deepgramSocket, 1011, 'Failed to forward transcript')
+      })
     } catch (error) {
       console.error('Failed to forward Deepgram message', error)
       closeSocket(browserSocket, 1011, 'Failed to forward transcript')
@@ -228,7 +247,16 @@ function allowedOrigins(env: Bindings) {
     env.BETTER_AUTH_URL,
     'http://localhost:3000',
     'http://localhost:8787',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:8787',
+    'http://[::1]:3000',
+    'http://[::1]:8787',
   ].filter((origin): origin is string => Boolean(origin)))
+}
+
+function isLocalRequest(request: Request) {
+  const hostname = new URL(request.url).hostname
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
 }
 
 app.use(
@@ -293,9 +321,11 @@ app.get('/dictation/stream', async (c) => {
     return c.json({ error: 'DEEPGRAM_API_KEY is not configured' }, 500)
   }
 
-  const session = await getCurrentSession(c)
-  if (!session) {
-    return c.json({ error: 'Authentication required' }, 401)
+  if (!isLocalRequest(c.req.raw)) {
+    const session = await getCurrentSession(c)
+    if (!session) {
+      return c.json({ error: 'Authentication required' }, 401)
+    }
   }
 
   return proxyDeepgramDictation(c.req.raw, apiKey)

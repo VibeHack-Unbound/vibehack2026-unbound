@@ -59,10 +59,15 @@ export function CatAgentSheet({ isOpen, onClose }: { isOpen: boolean; onClose: (
   return (
     <div className="sheet-backdrop" role="presentation">
       <section aria-label="Cat voice agent" className="bottom-sheet cat-agent-sheet" role="dialog">
-        <button aria-label="Close cat agent" className="sheet-close" onClick={onClose} type="button">
+        <button
+          aria-label="Close cat agent"
+          className="sheet-close"
+          onClick={onClose}
+          type="button"
+        >
           ×
         </button>
-        <CatIllustration mood="happy" size="small" />
+        <CatIllustration tier={1} size={90} />
         <div className="speech-bubble cat-bubble">
           <p>{isThinking ? 'Thinking...' : catReply}</p>
         </div>
@@ -71,7 +76,13 @@ export function CatAgentSheet({ isOpen, onClose }: { isOpen: boolean; onClose: (
             <p>{userText}</p>
           </div>
         ) : null}
-        <button aria-pressed={isListening} className="agent-mic" data-listening={isListening} onClick={toggleListening} type="button">
+        <button
+          aria-pressed={isListening}
+          className="agent-mic"
+          data-listening={isListening}
+          onClick={toggleListening}
+          type="button"
+        >
           {isListening ? 'Stop listening' : 'Start voice'}
         </button>
         <p className="quiet-note">

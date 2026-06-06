@@ -3,6 +3,7 @@ import appCss from '../styles.css?url'
 import type { ReactNode } from 'react'
 
 export const Route = createRootRoute({
+  component: AppRoot,
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
@@ -47,11 +48,23 @@ function RootDocument({ children }: { children: ReactNode }) {
 
 function NotFoundPage() {
   return (
-    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF6F0' }}>
+    <main
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#FAF6F0',
+      }}
+    >
       <div style={{ textAlign: 'center', padding: '32px' }}>
-        <p style={{ fontSize: '0.8rem', color: '#A89F94', fontWeight: 700, marginBottom: 8 }}>404</p>
+        <p style={{ fontSize: '0.8rem', color: '#A89F94', fontWeight: 700, marginBottom: 8 }}>
+          404
+        </p>
         <h1 style={{ fontSize: '1.5rem', color: '#2C3E35', marginBottom: 12 }}>page not found</h1>
-        <a href="/dashboard" style={{ color: '#80B0E8', fontWeight: 700 }}>go home →</a>
+        <a href="/dashboard" style={{ color: '#80B0E8', fontWeight: 700 }}>
+          go home →
+        </a>
       </div>
     </main>
   )

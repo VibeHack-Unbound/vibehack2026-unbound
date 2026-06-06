@@ -19,6 +19,5 @@ function TodayRedirect() {
     navigate({ to: '/calendar', search: { open: todayStr }, replace: true })
   }, [navigate, todayStr])
 
-  // Render nothing while redirecting
   return null
 }

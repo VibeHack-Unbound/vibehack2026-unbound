@@ -20,15 +20,7 @@ const checklistItems = [
   { icon: '💬', key: 'social', label: 'Did you talk to someone?' },
 ]
 
-const stressChips = [
-  'Work',
-  'Study',
-  'Money',
-  'Loneliness',
-  'Health',
-  'Relationship',
-  'Other',
-]
+const stressChips = ['Work', 'Study', 'Money', 'Loneliness', 'Health', 'Relationship', 'Other']
 
 export const Route = createFileRoute('/check-in')({
   component: CheckInPage,
@@ -161,7 +153,9 @@ function CheckInPage() {
                 className="check-item"
                 data-checked={isChecked}
                 key={item.key}
-                onClick={() => setChecked((current) => ({ ...current, [item.key]: !current[item.key] }))}
+                onClick={() =>
+                  setChecked((current) => ({ ...current, [item.key]: !current[item.key] }))
+                }
                 type="button"
               >
                 <span>{item.icon}</span>
@@ -210,7 +204,11 @@ function CheckInPage() {
           />
         </label>
 
-        <button className="primary-action" onClick={() => navigate({ to: '/dashboard' })} type="button">
+        <button
+          className="primary-action"
+          onClick={() => navigate({ to: '/dashboard' })}
+          type="button"
+        >
           Save today 🌱
         </button>
       </div>
@@ -242,7 +240,9 @@ function MoodSlider({
         max="10"
         min="1"
         onChange={(event) => onChange(Number(event.target.value))}
-        style={{ background: `linear-gradient(to right, ${color} 0%, ${color} ${progress}%, #E8E3D8 ${progress}%)` }}
+        style={{
+          background: `linear-gradient(to right, ${color} 0%, ${color} ${progress}%, #E8E3D8 ${progress}%)`,
+        }}
         type="range"
         value={value}
       />

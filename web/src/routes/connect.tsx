@@ -94,7 +94,9 @@ function ConnectPage() {
               <div className="support-card-actions">
                 {r.phone && (
                   <a
-                    href={r.phone.startsWith('text') ? `sms:85258` : `tel:${r.phone.replace(/\s/g, '')}`}
+                    href={
+                      r.phone.startsWith('text') ? `sms:85258` : `tel:${r.phone.replace(/\s/g, '')}`
+                    }
                     className="support-link"
                   >
                     📞 {r.phone}
@@ -114,8 +116,10 @@ function ConnectPage() {
 
               {r.languages && r.languages.length > 1 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 4 }}>
-                  {r.languages.map(lang => (
-                    <span key={lang} className="lang-tag">{lang}</span>
+                  {r.languages.map((lang) => (
+                    <span key={lang} className="lang-tag">
+                      {lang}
+                    </span>
                   ))}
                 </div>
               )}

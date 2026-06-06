@@ -1,6 +1,21 @@
 import { createAuthClient } from 'better-auth/react'
 
-export const apiOrigin = import.meta.env.VITE_HTTP_API_URL ?? 'http://localhost:8787'
+function localApiOrigin() {
+  if (typeof window === 'undefined') return 'http://localhost:8787'
+
+  const { hostname } = window.location
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `http://${hostname}:8787`
+  }
+
+  if (hostname === '::1' || hostname === '[::1]') {
+    return 'http://[::1]:8787'
+  }
+
+  return 'http://localhost:8787'
+}
+
+export const apiOrigin = import.meta.env.VITE_HTTP_API_URL ?? localApiOrigin()
 
 export const authClient = createAuthClient({
   baseURL: apiOrigin,

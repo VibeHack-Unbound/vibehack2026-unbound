@@ -33,8 +33,17 @@ function DashboardPage() {
             <h1 className="page-title">hi, mei 👋</h1>
             <p className="page-subtitle">here's how you've been doing</p>
           </div>
-          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', textAlign: 'right' }}>
-            {new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toLowerCase()}
+          <div
+            style={{
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              color: 'var(--muted)',
+              textAlign: 'right',
+            }}
+          >
+            {new Date()
+              .toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+              .toLowerCase()}
           </div>
         </header>
 
@@ -43,7 +52,9 @@ function DashboardPage() {
           {/* Left column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* Wellness score ring */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}
+            >
               <span className="section-label">wellness score</span>
               <div
                 className="wellness-score-ring"
@@ -71,14 +82,18 @@ function DashboardPage() {
             <div className="card card-pad" style={{ gap: 8 }}>
               <span className="section-label">this week</span>
               <p className="ai-summary">
-                you have been {tierInfo.label} this week. exam stress mentioned {MEI_DATA.filter(d => d.stressTags.includes('exams')).length} times.
+                you have been {tierInfo.label} this week. exam stress mentioned{' '}
+                {MEI_DATA.filter((d) => d.stressTags.includes('exams')).length} times.
               </p>
             </div>
 
             {/* Recommendation */}
             <div
               className="recommendation-card"
-              style={{ background: `${tierInfo.colour}22`, border: `1.5px solid ${tierInfo.colour}66` }}
+              style={{
+                background: `${tierInfo.colour}22`,
+                border: `1.5px solid ${tierInfo.colour}66`,
+              }}
             >
               {tierInfo.recommendation}
             </div>
@@ -92,7 +107,9 @@ function DashboardPage() {
 
         {/* Last 7 days bar chart */}
         <div className="card card-pad">
-          <span className="section-label" style={{ display: 'block', marginBottom: 10 }}>last 7 days</span>
+          <span className="section-label" style={{ display: 'block', marginBottom: 10 }}>
+            last 7 days
+          </span>
           <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', height: 64 }}>
             {last7.map((entry) => {
               const t = scoreToTier(entry.score)
@@ -119,14 +136,19 @@ function DashboardPage() {
         {tier === 5 && (
           <div className="tier5-safety-card">
             <h3>you don't have to face this alone</h3>
-            <p>we've noticed you might need some extra support right now. please reach out — help is available 24/7.</p>
+            <p>
+              we've noticed you might need some extra support right now. please reach out — help is
+              available 24/7.
+            </p>
             <div className="crisis-btns">
               <a href="tel:116123" className="crisis-btn call">
-                📞 samaritans<br />
+                📞 samaritans
+                <br />
                 <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>116 123</span>
               </a>
               <a href="sms:85258" className="crisis-btn text">
-                💬 shout<br />
+                💬 shout
+                <br />
                 <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>text 85258</span>
               </a>
             </div>

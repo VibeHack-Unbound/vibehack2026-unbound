@@ -15,21 +15,24 @@ export const TIERS: Record<Tier, TierInfo> = {
     label: 'coping well',
     colour: '#80B0E8',
     catMood: 'floating',
-    recommendation: 'you\'re doing great. keep up your current routines and celebrate small wins today.',
+    recommendation:
+      "you're doing great. keep up your current routines and celebrate small wins today.",
   },
   2: {
     tier: 2,
     label: 'coping ok',
     colour: '#C3B8E8',
     catMood: 'cloud',
-    recommendation: 'things feel manageable. a short walk or a chat with a friend can lift your mood.',
+    recommendation:
+      'things feel manageable. a short walk or a chat with a friend can lift your mood.',
   },
   3: {
     tier: 3,
     label: 'mild watch',
     colour: '#F2D06B',
     catMood: 'hanger',
-    recommendation: 'you\'ve been under some pressure lately. try a 5-minute breathing exercise or journaling.',
+    recommendation:
+      "you've been under some pressure lately. try a 5-minute breathing exercise or journaling.",
   },
   4: {
     tier: 4,
@@ -43,7 +46,8 @@ export const TIERS: Record<Tier, TierInfo> = {
     label: 'need support',
     colour: '#C4B5A5',
     catMood: 'wrapped',
-    recommendation: 'you don\'t have to carry this alone. please reach out to one of the resources below.',
+    recommendation:
+      "you don't have to carry this alone. please reach out to one of the resources below.",
   },
 }
 

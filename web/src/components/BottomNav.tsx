@@ -1,10 +1,26 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+
 import { getTodayEntry } from '../lib/meiData'
+
+type NavItem = {
+  icon: ReactNode
+  label: string
+  to: '/dashboard' | '/calendar' | '/today' | '/connect'
+  isCat: boolean
+  activePaths?: string[]
+}
 
 function HomeIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
     </svg>
   )
@@ -12,7 +28,14 @@ function HomeIcon() {
 
 function CalendarIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
       <line x1="16" y1="2" x2="16" y2="6" />
       <line x1="8" y1="2" x2="8" y2="6" />
@@ -23,7 +46,14 @@ function CalendarIcon() {
 
 function SupportIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.18 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z" />
     </svg>
   )
@@ -32,10 +62,17 @@ function SupportIcon() {
 function CatIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 3C9 3 7 5 7 8c0 1.2.4 2.3 1 3.1L7 13h1.5l.6-1C10 12.6 11 13 12 13s2-.4 2.9-1l.6 1H17l-1-1.9c.6-.8 1-1.9 1-3.1 0-3-2-5-6-5zm-1.5 4c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1zm3 0c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1zm-1.5 3.5c-.8 0-1.5-.2-2-.6.2-.1.4-.1.5-.1h3c.2 0 .4 0 .5.1-.5.4-1.2.6-2 .6zM7 15c-2.2 0-4 1.8-4 4v1h18v-1c0-2.2-1.8-4-4-4H7z"/>
+      <path d="M12 3C9 3 7 5 7 8c0 1.2.4 2.3 1 3.1L7 13h1.5l.6-1C10 12.6 11 13 12 13s2-.4 2.9-1l.6 1H17l-1-1.9c.6-.8 1-1.9 1-3.1 0-3-2-5-6-5zm-1.5 4c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1zm3 0c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1zm-1.5 3.5c-.8 0-1.5-.2-2-.6.2-.1.4-.1.5-.1h3c.2 0 .4 0 .5.1-.5.4-1.2.6-2 .6zM7 15c-2.2 0-4 1.8-4 4v1h18v-1c0-2.2-1.8-4-4-4H7z" />
     </svg>
   )
 }
+
+const navItems: NavItem[] = [
+  { icon: <HomeIcon />, label: 'home', to: '/dashboard', isCat: false },
+  { icon: <CalendarIcon />, label: 'calendar', to: '/calendar', isCat: false },
+  { icon: <CatIcon />, label: 'today', to: '/today', isCat: true, activePaths: ['/check-in'] },
+  { icon: <SupportIcon />, label: 'support', to: '/connect', isCat: false },
+] as const
 
 const NUDGE_KEY = 'unbound_today_nudge_dismissed'
 
@@ -44,10 +81,9 @@ function getTodayKey() {
 }
 
 function shouldShowNudge(): boolean {
-  // Only show if today has no entry yet
   const todayEntry = getTodayEntry()
   if (todayEntry) return false
-  // And user hasn't dismissed it today
+
   try {
     const dismissed = localStorage.getItem(NUDGE_KEY)
     return dismissed !== getTodayKey()
@@ -61,69 +97,51 @@ export function BottomNav() {
   const [showNudge, setShowNudge] = useState(false)
 
   useEffect(() => {
-    // Small delay so the nudge appears naturally after page load
-    const t = setTimeout(() => {
+    const timeout = setTimeout(() => {
       setShowNudge(shouldShowNudge())
     }, 900)
-    return () => clearTimeout(t)
+
+    return () => clearTimeout(timeout)
   }, [pathname])
 
   function dismissNudge() {
     try {
       localStorage.setItem(NUDGE_KEY, getTodayKey())
-    } catch { /* ignore */ }
+    } catch {
+      // Ignore unavailable localStorage.
+    }
+
     setShowNudge(false)
   }
 
   return (
     <nav className="bottom-nav" aria-label="App navigation">
-      {/* Home */}
-      <Link
-        className="bottom-nav-item"
-        data-active={pathname === '/dashboard' || pathname === '/'}
-        to="/dashboard"
-      >
-        <HomeIcon />
-        <strong>home</strong>
-      </Link>
+      {navItems.map((item) => {
+        const active =
+          pathname === item.to ||
+          item.activePaths?.includes(pathname) === true ||
+          (item.to === '/dashboard' && pathname === '/')
 
-      {/* Calendar */}
-      <Link
-        className="bottom-nav-item"
-        data-active={pathname === '/calendar'}
-        to="/calendar"
-      >
-        <CalendarIcon />
-        <strong>calendar</strong>
-      </Link>
+        return (
+          <Link
+            aria-label={item.to === '/today' ? 'log today' : undefined}
+            className={`bottom-nav-item${item.isCat ? ' cat-tab' : ''}`}
+            data-active={active}
+            key={item.to}
+            onClick={item.to === '/today' ? dismissNudge : undefined}
+            to={item.to}
+          >
+            {item.icon}
+            <strong>{item.label}</strong>
 
-      {/* Today – prominent cat tab with nudge tooltip */}
-      <Link
-        className="bottom-nav-item cat-tab"
-        data-active={pathname === '/today'}
-        to="/today"
-        onClick={dismissNudge}
-        aria-label="log today"
-      >
-        <CatIcon />
-        <strong>today</strong>
-
-        {showNudge && (
-          <div className="today-nudge" aria-live="polite">
-            how are you feeling today?
-          </div>
-        )}
-      </Link>
-
-      {/* Support */}
-      <Link
-        className="bottom-nav-item"
-        data-active={pathname === '/connect'}
-        to="/connect"
-      >
-        <SupportIcon />
-        <strong>support</strong>
-      </Link>
+            {item.to === '/today' && showNudge ? (
+              <div className="today-nudge" aria-live="polite">
+                how are you feeling today?
+              </div>
+            ) : null}
+          </Link>
+        )
+      })}
     </nav>
   )
 }
