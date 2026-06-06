@@ -1,6 +1,7 @@
-import { HeadContent, Link, Scripts, createRootRoute } from '@tanstack/react-router'
+import { HeadContent, Link, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
 
 import appCss from '../styles.css?url'
+import { I18nProvider } from '../lib/i18n'
 
 import type { ReactNode } from 'react'
 
@@ -28,6 +29,14 @@ export const Route = createRootRoute({
   notFoundComponent: NotFoundPage,
   shellComponent: RootDocument,
 })
+
+function AppRoot() {
+  return (
+    <I18nProvider>
+      <Outlet />
+    </I18nProvider>
+  )
+}
 
 function RootDocument({ children }: { children: ReactNode }) {
   return (

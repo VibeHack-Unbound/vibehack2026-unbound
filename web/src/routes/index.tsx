@@ -1,65 +1,124 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
+
+import { PhoneShell } from '../components/PhoneShell'
+import { languageOptions, useI18n } from '../lib/i18n'
+
+import type { Language } from '../lib/i18n'
+
+const moodOptions = [
+  { emoji: '😔', label: 'Very sad', value: 1 },
+  { emoji: '😕', label: 'Sad', value: 2 },
+  { emoji: '😐', label: 'Neutral', value: 3 },
+  { emoji: '🙂', label: 'Good', value: 4 },
+  { emoji: '😊', label: 'Great', value: 5 },
+]
 
 export const Route = createFileRoute('/')({
-  component: HomePage,
+  component: OnboardingPage,
 })
 
-function HomePage() {
-  return (
-    <main>
-      <section className="mx-auto grid max-w-6xl gap-10 px-6 py-16 md:grid-cols-[1fr_360px] md:items-center md:py-24">
-        <div>
-          <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-slate-950 md:text-6xl">
-            Build, reflect, and keep momentum.
-          </h1>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-            Unbound is a simple workspace for tracking progress and keeping a lightweight journal
-            beside the work.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              to="/app"
-              className="rounded-md bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              Open app
-            </Link>
-            <a
-              href="#learn-more"
-              className="rounded-md border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
-            >
-              Learn more
-            </a>
-          </div>
-        </div>
+function OnboardingPage() {
+  const navigate = useNavigate()
+  const { language, setLanguage } = useI18n()
+  const [step, setStep] = useState<1 | 2>(1)
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>(language)
+  const [selectedMood, setSelectedMood] = useState<number | null>(null)
+  const [note, setNote] = useState('')
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-          <div className="rounded-lg bg-white p-4 shadow-sm">
-            <div className="mb-4 h-2 w-24 rounded-full bg-slate-200" />
-            <div className="space-y-3">
-              <div className="h-16 rounded-md border border-slate-200 bg-slate-50" />
-              <div className="h-16 rounded-md border border-slate-200 bg-slate-50" />
-              <div className="h-24 rounded-md border border-slate-200 bg-slate-50" />
+  const isRtl = selectedLanguage === 'ar'
+
+  return (
+    <PhoneShell>
+      <div className="screen onboarding-screen" dir={isRtl ? 'rtl' : 'ltr'}>
+        {step === 1 ? (
+          <>
+            <header className="center-header">
+              <div className="mini-brand">
+                <span className="brand-cat">●</span>
+                <strong>Unbound</strong>
+              </div>
+              <h1>
+                This app speaks
+                <em> your language</em>
+              </h1>
+              <p>Choose the language you feel most comfortable in.</p>
+            </header>
+
+            <div className="language-grid prototype-grid">
+              {languageOptions.map((option) => (
+                <button
+                  aria-pressed={selectedLanguage === option.code}
+                  className="lang-btn"
+                  data-selected={selectedLanguage === option.code}
+                  key={option.code}
+                  onClick={() => setSelectedLanguage(option.code)}
+                  type="button"
+                >
+                  <span>{option.flag}</span>
+                  <strong>{option.nativeName}</strong>
+                  <small>{option.englishName}</small>
+                </button>
+              ))}
             </div>
-          </div>
-        </div>
-      </section>
 
-      <section id="learn-more" className="border-t border-slate-200 bg-slate-50 px-6 py-12">
-        <div className="mx-auto grid max-w-6xl gap-4 md:grid-cols-3">
-          <BasicPoint title="See what matters" body="A simple overview for the state of the work." />
-          <BasicPoint title="Write it down" body="A journal for notes, decisions, and follow-ups." />
-          <BasicPoint title="Stay lightweight" body="No heavy setup. Just enough structure to use." />
-        </div>
-      </section>
-    </main>
-  )
-}
+            <button
+              className="primary-action"
+              onClick={() => {
+                setLanguage(selectedLanguage)
+                setStep(2)
+              }}
+              type="button"
+            >
+              Continue →
+            </button>
+            <p className="quiet-note">You can change this anytime in settings.</p>
+          </>
+        ) : (
+          <>
+            <div className="mini-brand left">
+              <span className="brand-cat calm">●</span>
+              <strong>Unbound</strong>
+            </div>
+            <header className="page-copy">
+              <h1>How are you feeling right now?</h1>
+              <p>There is no right or wrong answer.</p>
+            </header>
 
-function BasicPoint({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white p-5">
-      <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
-    </div>
+            <div className="mood-row">
+              {moodOptions.map((mood) => (
+                <button
+                  aria-label={mood.label}
+                  aria-pressed={selectedMood === mood.value}
+                  className="mood-btn"
+                  data-selected={selectedMood === mood.value}
+                  key={mood.value}
+                  onClick={() => setSelectedMood(mood.value)}
+                  type="button"
+                >
+                  {mood.emoji}
+                </button>
+              ))}
+            </div>
+
+            {selectedMood ? <span className="mood-label">{moodOptions[selectedMood - 1]?.label}</span> : null}
+
+            <label className="field-stack">
+              <span>Anything you want to add?</span>
+              <textarea
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="Write anything on your mind..."
+                rows={3}
+              />
+            </label>
+
+            <button className="primary-action" onClick={() => navigate({ to: '/check-in' })} type="button">
+              Start journaling 🌱
+            </button>
+          </>
+        )}
+      </div>
+    </PhoneShell>
   )
 }
