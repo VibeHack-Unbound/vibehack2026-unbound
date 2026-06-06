@@ -1,4 +1,13 @@
 import { Link, useRouterState } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
+
+type NavItem = {
+  icon: ReactNode
+  label: string
+  to: '/dashboard' | '/calendar' | '/today' | '/connect'
+  isCat: boolean
+  activePaths?: string[]
+}
 
 function HomeIcon() {
   return (
@@ -32,10 +41,10 @@ function CatIcon() {
   )
 }
 
-const navItems = [
+const navItems: NavItem[] = [
   { icon: <HomeIcon />, label: 'home', to: '/dashboard', isCat: false },
   { icon: <CalendarIcon />, label: 'calendar', to: '/calendar', isCat: false },
-  { icon: <CatIcon />, label: 'today', to: '/today', isCat: true },
+  { icon: <CatIcon />, label: 'today', to: '/today', isCat: true, activePaths: ['/check-in'] },
   { icon: <SupportIcon />, label: 'support', to: '/connect', isCat: false },
 ] as const
 
@@ -46,7 +55,11 @@ export function BottomNav() {
       {navItems.map((item) => (
         <Link
           className={`bottom-nav-item${item.isCat ? ' cat-tab' : ''}`}
-          data-active={pathname === item.to || (item.to === '/dashboard' && pathname === '/')}
+          data-active={
+            pathname === item.to ||
+            item.activePaths?.includes(pathname) === true ||
+            (item.to === '/dashboard' && pathname === '/')
+          }
           key={item.to}
           to={item.to}
         >

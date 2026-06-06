@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 
+import { CatIllustration } from '#/components/CatIllustration'
 import { authClient, safeRedirectPath } from '#/lib/auth'
 
 type AuthMode = 'login' | 'register'
@@ -74,14 +75,25 @@ export function AuthPage({ mode, redirect }: AuthPageProps) {
   }
 
   return (
-    <main className="min-h-[calc(100vh-65px)] bg-zinc-50">
-      <section className="mx-auto grid max-w-6xl gap-10 px-5 py-12 md:grid-cols-[1fr_420px] md:px-8 md:py-20">
-        <div className="flex flex-col justify-center">
-          <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-zinc-950 md:text-6xl">
-            {title}
-          </h1>
-          <p className="mt-5 max-w-xl text-lg leading-8 text-zinc-600">{body}</p>
-          <div className="mt-10 grid max-w-xl gap-3 border-y border-zinc-200 py-6">
+    <main className="auth-page">
+      <section className="auth-shell">
+        <div className="auth-story">
+          <div className="mini-brand left auth-brand">
+            <span className="brand-cat calm">●</span>
+            <strong>Unbound</strong>
+          </div>
+
+          <div className="auth-copy">
+            <p className="auth-kicker">{isRegister ? 'Start private' : 'Welcome back'}</p>
+            <h1>{title}</h1>
+            <p>{body}</p>
+          </div>
+
+          <div className="auth-illustration" aria-hidden="true">
+            <CatIllustration tier={isRegister ? 1 : 2} size={180} />
+          </div>
+
+          <div className="auth-points">
             <AuthPoint
               title="D1-backed sessions"
               body="Accounts, sessions, and reset tokens live in the API Worker database."
@@ -97,27 +109,20 @@ export function AuthPage({ mode, redirect }: AuthPageProps) {
           </div>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="h-fit rounded-lg border border-zinc-200 bg-white p-6 shadow-sm"
-        >
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-zinc-950">{submitLabel}</h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-600">
+        <form onSubmit={handleSubmit} className="auth-card">
+          <div className="auth-card-header">
+            <h2>{submitLabel}</h2>
+            <p>
               {alternateText}{' '}
-              <a href={alternateHref} className="font-semibold text-zinc-950 underline">
+              <a href={alternateHref}>
                 {alternateAction}
               </a>
             </p>
           </div>
 
-          {error ? (
-            <div className="mt-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          ) : null}
+          {error ? <div className="auth-error">{error}</div> : null}
 
-          <div className="mt-6 grid gap-4">
+          <div className="auth-field-list">
             {isRegister ? (
               <AuthField
                 label="Name"
@@ -147,10 +152,7 @@ export function AuthPage({ mode, redirect }: AuthPageProps) {
           </div>
 
           {!isRegister ? (
-            <Link
-              to="/forgot-password"
-              className="mt-3 inline-flex text-sm font-semibold text-zinc-700 underline"
-            >
+            <Link to="/forgot-password" className="auth-secondary-link">
               Forgot password?
             </Link>
           ) : null}
@@ -158,7 +160,7 @@ export function AuthPage({ mode, redirect }: AuthPageProps) {
           <button
             type="submit"
             disabled={loading || !email.trim() || !password || (isRegister && !name.trim())}
-            className="mt-6 w-full rounded-md bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="auth-submit"
           >
             {loading ? 'Working...' : submitLabel}
           </button>
@@ -170,9 +172,9 @@ export function AuthPage({ mode, redirect }: AuthPageProps) {
 
 function AuthPoint({ title, body }: { title: string; body: string }) {
   return (
-    <div>
-      <h3 className="font-semibold text-zinc-950">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-zinc-600">{body}</p>
+    <div className="auth-point">
+      <h3>{title}</h3>
+      <p>{body}</p>
     </div>
   )
 }
@@ -195,7 +197,7 @@ function AuthField({
   onChange: (value: string) => void
 }) {
   return (
-    <label className="grid gap-1.5 text-sm font-semibold text-zinc-800">
+    <label className="auth-field">
       <span>{label}</span>
       <input
         value={value}
@@ -204,7 +206,6 @@ function AuthField({
         minLength={minLength}
         required={required}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-11 rounded-md border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
       />
     </label>
   )

@@ -3,6 +3,7 @@ import appCss from '../styles.css?url'
 import type { ReactNode } from 'react'
 
 export const Route = createRootRoute({
+  component: AppRoot,
   head: () => ({
     meta: [
       { charSet: 'utf-8' },

@@ -45,6 +45,8 @@ const CHECKIN_QUESTIONS = [
 
 const STRESS_TAGS = ['exams', 'family', 'loneliness', 'money', 'health', 'other']
 
+type NativeSpeechRecognition = InstanceType<NonNullable<Window['SpeechRecognition']>>
+
 function MicIcon() {
   return (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -79,12 +81,12 @@ function TodayPage() {
   const [celebrating, setCelebrating] = useState(false)
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const recognitionRef = useRef<NativeSpeechRecognition | null>(null)
 
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
-      if (recognitionRef.current) recognitionRef.current.abort()
+      if (recognitionRef.current) recognitionRef.current.stop()
     }
   }, [])
 
@@ -97,8 +99,7 @@ function TodayPage() {
     timerRef.current = setInterval(() => setTimer(t => t + 1), 1000)
 
     // Use Web Speech API if available
-    const SpeechRecognition = (window as unknown as { SpeechRecognition?: typeof window.SpeechRecognition; webkitSpeechRecognition?: typeof window.SpeechRecognition }).SpeechRecognition
-      || (window as unknown as { webkitSpeechRecognition?: typeof window.SpeechRecognition }).webkitSpeechRecognition
+    const SpeechRecognition = window.SpeechRecognition ?? window.webkitSpeechRecognition
 
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition()
@@ -107,7 +108,7 @@ function TodayPage() {
       recognition.lang = 'en-US' // fallback; in production would use user's language
 
       let finalTranscript = ''
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
+      recognition.onresult = (event) => {
         let interim = ''
         for (let i = event.resultIndex; i < event.results.length; i++) {
           if (event.results[i].isFinal) {

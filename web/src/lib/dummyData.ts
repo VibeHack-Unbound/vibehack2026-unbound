@@ -1,13 +1,3 @@
-export const languages = [
-  'English',
-  '한국어',
-  '日本語',
-  '中文',
-  'Español',
-  'Français',
-  'العربية',
-]
-
 export const emotionOptions = [
   { icon: 'Calm', label: 'Calm', tone: '#8bb8a8' },
   { icon: 'Low', label: 'Low', tone: '#8ca7c7' },

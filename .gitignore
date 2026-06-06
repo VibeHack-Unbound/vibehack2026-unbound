@@ -19,3 +19,4 @@ web/todos.json
 **/.wrangler
 
 api/.env*
+api/.dev.vars*
