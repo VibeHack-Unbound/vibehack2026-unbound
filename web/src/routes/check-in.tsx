@@ -4,7 +4,6 @@ import { useCallback, useState } from 'react'
 import { BottomNav } from '../components/BottomNav'
 import { PhoneShell } from '../components/PhoneShell'
 import { useSpeechRecognition } from '../features/useSpeechRecognition'
-import { useI18n } from '../lib/i18n'
 
 const moodOptions = [
   { emoji: '😔', value: 1, label: 'Very sad' },
@@ -15,20 +14,20 @@ const moodOptions = [
 ]
 
 const checklistItems = [
-  { icon: '🍽️', key: 'ate', label: 'Did you eat today?', labelKo: '오늘 식사를 했나요?' },
-  { icon: '🌤️', key: 'outside', label: 'Did you go outside?', labelKo: '오늘 외출했나요?' },
-  { icon: '🏃', key: 'movement', label: 'Did you move your body?', labelKo: '오늘 몸을 움직였나요?' },
-  { icon: '💬', key: 'social', label: 'Did you talk to someone?', labelKo: '오늘 누군가와 이야기했나요?' },
+  { icon: '🍽️', key: 'ate', label: 'Did you eat today?' },
+  { icon: '🌤️', key: 'outside', label: 'Did you go outside?' },
+  { icon: '🏃', key: 'movement', label: 'Did you move your body?' },
+  { icon: '💬', key: 'social', label: 'Did you talk to someone?' },
 ]
 
 const stressChips = [
-  { key: 'Work', ko: '업무' },
-  { key: 'Study', ko: '공부' },
-  { key: 'Money', ko: '돈' },
-  { key: 'Loneliness', ko: '외로움' },
-  { key: 'Health', ko: '건강' },
-  { key: 'Relationship', ko: '관계' },
-  { key: 'Other', ko: '기타' },
+  'Work',
+  'Study',
+  'Money',
+  'Loneliness',
+  'Health',
+  'Relationship',
+  'Other',
 ]
 
 export const Route = createFileRoute('/check-in')({
@@ -37,7 +36,6 @@ export const Route = createFileRoute('/check-in')({
 
 function CheckInPage() {
   const navigate = useNavigate()
-  const { language, t } = useI18n()
   const [activeTab, setActiveTab] = useState<'quick' | 'write'>('quick')
   const [selectedMood, setSelectedMood] = useState<number | null>(null)
   const [energy, setEnergy] = useState(5)
@@ -53,11 +51,11 @@ function CheckInPage() {
   }, [])
 
   const { error, isListening, isSupported, toggleListening } = useSpeechRecognition({
-    language: language === 'ko' ? 'ko-KR' : language === 'ja' ? 'ja-JP' : language === 'zh' ? 'zh-CN' : 'en-GB',
+    language: 'en-GB',
     onTranscript: appendTranscript,
   })
 
-  const today = new Date().toLocaleDateString(language === 'ko' ? 'ko-KR' : 'en-GB', {
+  const today = new Date().toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'long',
     weekday: 'long',
@@ -66,15 +64,13 @@ function CheckInPage() {
 
   return (
     <PhoneShell withNav>
-      <div className="screen checkin-screen" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="screen checkin-screen">
         <header className="page-copy">
           <p className="date-line">{today}</p>
-          <h1>
-            {t('greeting')}, {language === 'ko' ? '민준' : 'Alex'} 👋
-          </h1>
+          <h1>Good morning, Alex 👋</h1>
         </header>
 
-        <p className="section-question">{t('howFeeling')}</p>
+        <p className="section-question">How are you feeling today?</p>
 
         <div className="segmented-tabs" role="tablist">
           <button
@@ -84,7 +80,7 @@ function CheckInPage() {
             role="tab"
             type="button"
           >
-            {t('tabQuick')}
+            Quick
           </button>
           <button
             aria-selected={activeTab === 'write'}
@@ -93,7 +89,7 @@ function CheckInPage() {
             role="tab"
             type="button"
           >
-            {t('tabWrite')}
+            Write
           </button>
         </div>
 
@@ -116,9 +112,9 @@ function CheckInPage() {
             </div>
 
             <div className="slider-list">
-              <MoodSlider color="#5B9FD8" label={t('energy')} value={energy} onChange={setEnergy} />
-              <MoodSlider color="#D9C9E8" label={t('anxiety')} value={anxiety} onChange={setAnxiety} />
-              <MoodSlider color="#F5C5D1" label={t('sleep')} value={sleep} onChange={setSleep} />
+              <MoodSlider color="#5B9FD8" label="Energy" value={energy} onChange={setEnergy} />
+              <MoodSlider color="#D9C9E8" label="Anxiety" value={anxiety} onChange={setAnxiety} />
+              <MoodSlider color="#F5C5D1" label="Sleep" value={sleep} onChange={setSleep} />
             </div>
           </section>
         ) : (
@@ -138,7 +134,7 @@ function CheckInPage() {
             <textarea
               value={journal}
               onChange={(event) => setJournal(event.target.value)}
-              placeholder={t('writePlaceholder')}
+              placeholder="What's on your mind today? Write as much or as little as you like."
               rows={7}
             />
             <p className="quiet-note">
@@ -146,7 +142,7 @@ function CheckInPage() {
                 ? 'Listening now. Your words will appear here phrase by phrase.'
                 : isSupported
                   ? 'Tap Mic to speak, then edit the text freely.'
-                  : t('voiceUnsupported')}
+                  : 'Voice input is not available in this browser.'}
             </p>
             {error ? <p className="quiet-note">Speech input status: {error}</p> : null}
           </section>
@@ -169,7 +165,7 @@ function CheckInPage() {
                 type="button"
               >
                 <span>{item.icon}</span>
-                <strong>{language === 'ko' ? item.labelKo : item.label}</strong>
+                <strong>{item.label}</strong>
                 <i>{isChecked ? '✓' : ''}</i>
               </button>
             )
@@ -180,24 +176,24 @@ function CheckInPage() {
           <h2>Main stress source today</h2>
           <div>
             {stressChips.map((chip) => {
-              const isSelected = selectedStress.includes(chip.key)
+              const isSelected = selectedStress.includes(chip)
 
               return (
                 <button
                   aria-pressed={isSelected}
                   className="stress-chip"
                   data-selected={isSelected}
-                  key={chip.key}
+                  key={chip}
                   onClick={() =>
                     setSelectedStress((current) =>
-                      current.includes(chip.key)
-                        ? current.filter((value) => value !== chip.key)
-                        : [...current, chip.key],
+                      current.includes(chip)
+                        ? current.filter((value) => value !== chip)
+                        : [...current, chip],
                     )
                   }
                   type="button"
                 >
-                  {language === 'ko' ? chip.ko : chip.key}
+                  {chip}
                 </button>
               )
             })}
@@ -215,7 +211,7 @@ function CheckInPage() {
         </label>
 
         <button className="primary-action" onClick={() => navigate({ to: '/dashboard' })} type="button">
-          {t('saveToday')} 🌱
+          Save today 🌱
         </button>
       </div>
       <BottomNav />

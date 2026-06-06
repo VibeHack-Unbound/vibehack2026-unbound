@@ -2,7 +2,6 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { BottomNav } from '../components/BottomNav'
 import { PhoneShell } from '../components/PhoneShell'
-import { useI18n } from '../lib/i18n'
 
 const therapists = [
   {
@@ -11,7 +10,6 @@ const therapists = [
     languages: ['English', '한국어'],
     name: 'Dr. Yuna Park',
     specialty: 'Specialises in anxiety and cultural adjustment',
-    specialtyKo: '불안과 문화적 적응 전문',
     tags: ['NHS Free', 'Online'],
   },
   {
@@ -20,7 +18,6 @@ const therapists = [
     languages: ['English', 'Français'],
     name: 'Marcus Osei',
     specialty: 'Specialises in depression and international student wellbeing',
-    specialtyKo: '우울증 및 유학생 정신건강 전문',
     tags: ['Private', 'Online'],
   },
   {
@@ -29,7 +26,6 @@ const therapists = [
     languages: ['English', 'العربية', 'Urdu'],
     name: 'Aisha Rahman',
     specialty: 'Specialises in trauma, identity, and belonging',
-    specialtyKo: '트라우마, 정체성, 소속감 전문',
     tags: ['NHS Free'],
   },
 ]
@@ -39,29 +35,19 @@ export const Route = createFileRoute('/connect')({
 })
 
 function ConnectPage() {
-  const { language, t } = useI18n()
-
   return (
     <PhoneShell withNav>
-      <div className="screen support-screen" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="screen support-screen">
         <section className="support-banner hero">
           <span>🌿</span>
           <div>
-            <p>
-              {language === 'ko'
-                ? '요즘 많이 지쳐 보이시네요. 혼자 해결하려 하지 않아도 돼요.'
-                : "You've seemed really drained lately. You don't have to figure this out alone."}
-            </p>
-            <small>
-              {language === 'ko'
-                ? '아래에서 즉각적인 도움이나 전문 상담사를 찾을 수 있어요.'
-                : 'Find immediate help or a professional below.'}
-            </small>
+            <p>You&apos;ve seemed really drained lately. You don&apos;t have to figure this out alone.</p>
+            <small>Find immediate help or a professional below.</small>
           </div>
         </section>
 
         <section className="prototype-card talk-card">
-          <h1>{language === 'ko' ? '지금 누군가와 이야기하기' : 'Talk to someone now'}</h1>
+          <h1>Talk to someone now</h1>
           <div>
             <a className="primary-action small" href="tel:116123">
               Samaritans
@@ -77,7 +63,7 @@ function ConnectPage() {
         </section>
 
         <section className="therapist-section">
-          <h2>{t('findTherapist')}</h2>
+          <h2>Find a therapist nearby</h2>
           {therapists.map((therapist) => (
             <article className="therapist-card" key={therapist.name}>
               <div className="avatar" style={{ background: therapist.avatarColor }}>
@@ -85,7 +71,7 @@ function ConnectPage() {
               </div>
               <div>
                 <h3>{therapist.name}</h3>
-                <p>{language === 'ko' ? therapist.specialtyKo : therapist.specialty}</p>
+                <p>{therapist.specialty}</p>
                 <div className="tag-row">
                   {therapist.tags.map((tag) => (
                     <span key={tag}>{tag}</span>
@@ -98,14 +84,13 @@ function ConnectPage() {
         </section>
 
         <section className="summary-card">
-          <h2>{language === 'ko' ? '최근 요약' : 'Your recent summary'}</h2>
+          <h2>Your recent summary</h2>
           <p>
-            {language === 'ko'
-              ? '최근 기록을 영어로 요약해 드려서 처음부터 설명하지 않아도 돼요.'
-              : "We'll prepare a short summary of your recent entries in English so you do not have to explain everything from scratch."}
+            We&apos;ll prepare a short summary of your recent entries in English so you do not have to
+            explain everything from scratch.
           </p>
           <button className="primary-action small" type="button">
-            {language === 'ko' ? '더 알아보기' : 'Learn more'}
+            Learn more
           </button>
         </section>
       </div>

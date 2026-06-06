@@ -15,6 +15,10 @@
       "invocation_logs": true
     }
   },
+  "vars": {
+    "BETTER_AUTH_URL": "http://localhost:8787",
+    "WEB_ORIGIN": "http://localhost:3000"
+  },
   "d1_databases": [
     {
       "binding": "DB",
@@ -29,6 +33,10 @@
     "production": {
       "name": "unbound-api",
       "workers_dev": true,
+      "vars": {
+        "BETTER_AUTH_URL": "https://unbound-api.benz.workers.dev",
+        "WEB_ORIGIN": "https://unbound.benz.workers.dev"
+      },
       "d1_databases": [
         {
           "binding": "DB",
@@ -41,6 +49,10 @@
     "staging": {
       "name": "unbound-api-staging",
       "workers_dev": true,
+      "vars": {
+        "BETTER_AUTH_URL": "https://unbound-api-staging.benz.workers.dev",
+        "WEB_ORIGIN": "https://unbound-staging.benz.workers.dev"
+      },
       "d1_databases": [
         {
           "binding": "DB",

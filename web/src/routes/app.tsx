@@ -1,19 +1,25 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
+
+import { apiOrigin, authClient } from '#/lib/auth'
+import { getServerSession } from '#/lib/session'
+import { getServerSubmissions, type Submission } from '#/lib/submissions'
 
 export const Route = createFileRoute('/app')({
+  beforeLoad: async () => {
+    const auth = await getServerSession()
+    if (!auth) {
+      throw redirect({
+        to: '/login',
+        search: {
+          redirect: '/app',
+        },
+      })
+    }
+  },
+  loader: () => getServerSubmissions(),
   component: AppPage,
 })
-
-type Submission = {
-  id: string
-  teamName: string
-  projectName: string
-  description: string | null
-  repoUrl: string | null
-  demoUrl: string | null
-  createdAt: number
-}
 
 type SubmissionFormState = {
   teamName: string
@@ -31,8 +37,7 @@ const blankForm: SubmissionFormState = {
   demoUrl: '',
 }
 
-const apiOrigin = () => import.meta.env.VITE_HTTP_API_URL ?? 'http://localhost:8787'
-const endpoint = (path: string) => new URL(path, apiOrigin()).toString()
+const endpoint = (path: string) => new URL(path, apiOrigin).toString()
 
 async function responseError(response: Response) {
   try {
@@ -122,7 +127,9 @@ function formatCreatedAt(createdAt: number) {
 }
 
 function AppPage() {
-  const [submissions, setSubmissions] = useState<Submission[]>([])
+  const initialSubmissions = Route.useLoaderData()
+  const { data: auth } = authClient.useSession()
+  const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions)
   const [createForm, setCreateForm] = useState<SubmissionFormState>(blankForm)
   const [editForm, setEditForm] = useState<SubmissionFormState>(blankForm)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -152,10 +159,6 @@ function AppPage() {
       setBusy(false)
     }
   }
-
-  useEffect(() => {
-    void loadSubmissions()
-  }, [])
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -225,50 +228,51 @@ function AppPage() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-73px)] bg-slate-50">
+    <main className="min-h-[calc(100vh-65px)] bg-zinc-50">
       <section className="mx-auto max-w-6xl px-6 py-10">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-950">App</h1>
-            <p className="mt-2 text-slate-600">
-              Overview for status. Journal for notes and reflections.
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-950">Workspace</h1>
+            <p className="mt-2 text-zinc-600">
+              {auth?.user.email
+                ? `Signed in as ${auth.user.email}.`
+                : 'Overview for status. Journal for notes and reflections.'}
             </p>
           </div>
           <button
             type="button"
             onClick={() => void loadSubmissions()}
             disabled={busy}
-            className="w-fit rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-fit rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Refresh
           </button>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+          <section className="rounded-lg border border-zinc-200 bg-white p-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-zinc-500">
               Overview
             </p>
-            <h2 className="mt-3 text-2xl font-semibold text-slate-950">Today at a glance</h2>
+            <h2 className="mt-3 text-2xl font-semibold text-zinc-950">Today at a glance</h2>
             <div className="mt-6 grid gap-4">
               <Metric label="Journal entries" value={String(submissions.length)} />
               <Metric label="Linked entries" value={String(linkedSubmissions)} />
               <Metric label="Mode" value={editingId ? 'Edit' : 'New'} />
             </div>
-            <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <h3 className="font-semibold text-slate-950">Focus</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                This is the app overview. The working D1 create, read, update, and delete flow lives
-                in Journal.
+            <div className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+              <h3 className="font-semibold text-zinc-950">Focus</h3>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">
+                Your session scopes the D1 create, read, update, and delete flow to your account.
               </p>
             </div>
           </section>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+          <section className="rounded-lg border border-zinc-200 bg-white p-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-zinc-500">
               Journal
             </p>
-            <h2 className="mt-3 text-2xl font-semibold text-slate-950">Entries</h2>
+            <h2 className="mt-3 text-2xl font-semibold text-zinc-950">Entries</h2>
 
             {error ? (
               <div className="mt-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

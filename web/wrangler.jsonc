@@ -7,8 +7,8 @@
   "observability": {
     "logs": {
       "enabled": true,
-      "invocation_logs": true
-    }
+      "invocation_logs": true,
+    },
   },
   "main": "@tanstack/react-start/server-entry",
   "compatibility_flags": ["nodejs_compat"],
@@ -17,11 +17,11 @@
   "env": {
     "production": {
       "name": "unbound",
-      "workers_dev": true
+      "workers_dev": true,
     },
     "staging": {
       "name": "unbound-staging",
-      "workers_dev": true
-    }
-  }
+      "workers_dev": true,
+    },
+  },
 }

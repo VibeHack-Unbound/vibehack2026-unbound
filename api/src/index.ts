@@ -3,17 +3,146 @@
 import { apiReference } from '@scalar/hono-api-reference'
 import { swaggerUI } from '@hono/swagger-ui'
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { cors } from 'hono/cors'
 
+import { createAuth, type AuthBindings } from './auth'
 import { createDb } from './db/client'
 import { submissions, type Submission } from './db/schema'
 
-type Bindings = {
+type Bindings = AuthBindings & {
   DB: D1Database
+  DEEPGRAM_API_KEY?: string
+}
+
+type RequestContext = {
+  env: Bindings
+  req: {
+    raw: Request
+  }
 }
 
 const app = new OpenAPIHono<{ Bindings: Bindings }>()
+
+const DEEPGRAM_STREAM_URL = 'wss://api.deepgram.com/v1/listen'
+
+const deepgramDictationUrl = () => {
+  const url = new URL(DEEPGRAM_STREAM_URL)
+  url.search = new URLSearchParams({
+    model: 'nova-3',
+    punctuate: 'true',
+    dictation: 'true',
+    smart_format: 'true',
+    interim_results: 'true',
+    endpointing: '250',
+  }).toString()
+  return url
+}
+
+const isSocketOpen = (socket: WebSocket) => socket.readyState === WebSocket.OPEN
+
+const closeSocket = (socket: WebSocket, code = 1000, reason = '') => {
+  if (socket.readyState !== WebSocket.OPEN && socket.readyState !== WebSocket.CONNECTING) return
+
+  try {
+    socket.close(code, reason)
+  } catch {
+    socket.close(1000)
+  }
+}
+
+const sendSocketJson = (socket: WebSocket, payload: unknown) => {
+  if (isSocketOpen(socket)) {
+    socket.send(JSON.stringify(payload))
+  }
+}
+
+const sendSocketData = (socket: WebSocket, data: unknown) => {
+  if (!isSocketOpen(socket)) return
+
+  if (typeof data === 'string' || data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
+    socket.send(data)
+  }
+}
+
+const toErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'WebSocket proxy error'
+
+const proxyDeepgramDictation = async (request: Request, apiKey: string) => {
+  if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') {
+    return new Response('Expected Upgrade: websocket', { status: 426 })
+  }
+
+  const deepgramResponse = await fetch(deepgramDictationUrl(), {
+    headers: {
+      Authorization: `Token ${apiKey}`,
+      Upgrade: 'websocket',
+    },
+  })
+
+  const deepgramSocket = deepgramResponse.webSocket
+  if (!deepgramSocket) {
+    return new Response('Deepgram did not accept the WebSocket connection', { status: 502 })
+  }
+
+  const pair = new WebSocketPair()
+  const [clientSocket, browserSocket] = Object.values(pair)
+  browserSocket.accept({ allowHalfOpen: true })
+  deepgramSocket.accept({ allowHalfOpen: true })
+
+  browserSocket.addEventListener('message', (event) => {
+    try {
+      sendSocketData(deepgramSocket, event.data)
+    } catch (error) {
+      sendSocketJson(browserSocket, {
+        type: 'ProxyError',
+        error: toErrorMessage(error),
+      })
+      closeSocket(browserSocket, 1011, 'Failed to forward audio')
+      closeSocket(deepgramSocket, 1011, 'Failed to forward audio')
+    }
+  })
+
+  deepgramSocket.addEventListener('message', (event) => {
+    try {
+      sendSocketData(browserSocket, event.data)
+    } catch (error) {
+      console.error('Failed to forward Deepgram message', error)
+      closeSocket(browserSocket, 1011, 'Failed to forward transcript')
+      closeSocket(deepgramSocket, 1011, 'Failed to forward transcript')
+    }
+  })
+
+  browserSocket.addEventListener('close', (event) => {
+    if (isSocketOpen(deepgramSocket)) {
+      deepgramSocket.send(JSON.stringify({ type: 'CloseStream' }))
+    }
+    closeSocket(deepgramSocket, event.code, event.reason)
+  })
+
+  deepgramSocket.addEventListener('close', (event) => {
+    closeSocket(browserSocket, event.code, event.reason)
+  })
+
+  browserSocket.addEventListener('error', (event) => {
+    console.error('Browser dictation socket error', event)
+    closeSocket(deepgramSocket, 1011, 'Browser socket error')
+  })
+
+  deepgramSocket.addEventListener('error', (event) => {
+    console.error('Deepgram dictation socket error', event)
+    sendSocketJson(browserSocket, {
+      type: 'ProxyError',
+      error: 'Deepgram socket error',
+    })
+    closeSocket(browserSocket, 1011, 'Deepgram socket error')
+  })
+
+  return new Response(null, {
+    status: 101,
+    webSocket: clientSocket,
+  })
+}
 
 const SubmissionSchema = z
   .object({
@@ -67,6 +196,15 @@ const ErrorSchema = z
   })
   .openapi('Error')
 
+const unauthorizedResponse = {
+  description: 'Authentication required',
+  content: {
+    'application/json': {
+      schema: ErrorSchema,
+    },
+  },
+} as const
+
 const toResponse = (submission: Submission) => ({
   id: submission.id,
   teamName: submission.teamName,
@@ -77,15 +215,46 @@ const toResponse = (submission: Submission) => ({
   createdAt: submission.createdAt,
 })
 
+const createRequestAuth = (c: RequestContext) => createAuth(c.env, createDb(c.env.DB), c.req.raw)
+
+const getCurrentSession = (c: RequestContext) =>
+  createRequestAuth(c).api.getSession({
+    headers: c.req.raw.headers,
+  })
+
+function allowedOrigins(env: Bindings) {
+  return new Set([
+    env.WEB_ORIGIN,
+    env.BETTER_AUTH_URL,
+    'http://localhost:3000',
+    'http://localhost:8787',
+  ].filter((origin): origin is string => Boolean(origin)))
+}
+
 app.use(
   '*',
   cors({
-    origin: (origin) => origin || '*',
-    allowHeaders: ['Content-Type'],
+    origin: (origin, c) => {
+      if (!origin) return origin
+      return allowedOrigins(c.env).has(origin) ? origin : undefined
+    },
+    allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   }),
 )
+
+app.on(['GET', 'POST'], '/api/auth/*', (c) => createRequestAuth(c).handler(c.req.raw))
+
+app.get('/api/me', async (c) => {
+  const session = await getCurrentSession(c)
+
+  if (!session) {
+    return c.json({ error: 'Authentication required' }, 401)
+  }
+
+  return c.json(session)
+})
 
 app.get('/', (c) =>
   c.json({
@@ -93,6 +262,7 @@ app.get('/', (c) =>
     docs: '/docs',
     swagger: '/swagger',
     openapi: '/openapi.json',
+    dictationStream: '/dictation/stream',
   }),
 )
 
@@ -116,6 +286,21 @@ app.openapi(
   (c) => c.json({ status: 'ok' as const }),
 )
 
+app.get('/dictation/stream', async (c) => {
+  const apiKey = c.env.DEEPGRAM_API_KEY?.trim()
+
+  if (!apiKey) {
+    return c.json({ error: 'DEEPGRAM_API_KEY is not configured' }, 500)
+  }
+
+  const session = await getCurrentSession(c)
+  if (!session) {
+    return c.json({ error: 'Authentication required' }, 401)
+  }
+
+  return proxyDeepgramDictation(c.req.raw, apiKey)
+})
+
 app.openapi(
   createRoute({
     method: 'get',
@@ -138,14 +323,25 @@ app.openapi(
           },
         },
       },
+      401: unauthorizedResponse,
     },
   }),
   async (c) => {
+    const session = await getCurrentSession(c)
+    if (!session) {
+      return c.json({ error: 'Authentication required' }, 401)
+    }
+
     const { limit } = c.req.valid('query')
     const db = createDb(c.env.DB)
-    const rows = await db.select().from(submissions).orderBy(desc(submissions.createdAt)).limit(limit)
+    const rows = await db
+      .select()
+      .from(submissions)
+      .where(eq(submissions.userId, session.user.id))
+      .orderBy(desc(submissions.createdAt))
+      .limit(limit)
 
-    return c.json({ data: rows.map(toResponse) })
+    return c.json({ data: rows.map(toResponse) }, 200)
   },
 )
 
@@ -180,15 +376,22 @@ app.openapi(
           },
         },
       },
+      401: unauthorizedResponse,
     },
   }),
   async (c) => {
+    const session = await getCurrentSession(c)
+    if (!session) {
+      return c.json({ error: 'Authentication required' }, 401)
+    }
+
     const body = c.req.valid('json')
     const id = crypto.randomUUID()
     const db = createDb(c.env.DB)
 
     await db.insert(submissions).values({
       id,
+      userId: session.user.id,
       teamName: body.teamName,
       projectName: body.projectName,
       description: body.description ?? null,
@@ -196,7 +399,11 @@ app.openapi(
       demoUrl: body.demoUrl ?? null,
     })
 
-    const [created] = await db.select().from(submissions).where(eq(submissions.id, id)).limit(1)
+    const [created] = await db
+      .select()
+      .from(submissions)
+      .where(and(eq(submissions.id, id), eq(submissions.userId, session.user.id)))
+      .limit(1)
     if (!created) {
       return c.json({ error: 'Submission could not be created' }, 400)
     }
@@ -253,9 +460,15 @@ app.openapi(
           },
         },
       },
+      401: unauthorizedResponse,
     },
   }),
   async (c) => {
+    const session = await getCurrentSession(c)
+    if (!session) {
+      return c.json({ error: 'Authentication required' }, 401)
+    }
+
     const { id } = c.req.valid('param')
     const body = c.req.valid('json')
     const db = createDb(c.env.DB)
@@ -264,15 +477,26 @@ app.openapi(
       return c.json({ error: 'No changes provided' }, 400)
     }
 
-    const [existing] = await db.select().from(submissions).where(eq(submissions.id, id)).limit(1)
+    const [existing] = await db
+      .select()
+      .from(submissions)
+      .where(and(eq(submissions.id, id), eq(submissions.userId, session.user.id)))
+      .limit(1)
 
     if (!existing) {
       return c.json({ error: 'Submission not found' }, 404)
     }
 
-    await db.update(submissions).set(body).where(eq(submissions.id, id))
+    await db
+      .update(submissions)
+      .set(body)
+      .where(and(eq(submissions.id, id), eq(submissions.userId, session.user.id)))
 
-    const [updated] = await db.select().from(submissions).where(eq(submissions.id, id)).limit(1)
+    const [updated] = await db
+      .select()
+      .from(submissions)
+      .where(and(eq(submissions.id, id), eq(submissions.userId, session.user.id)))
+      .limit(1)
     if (!updated) {
       return c.json({ error: 'Submission could not be updated' }, 400)
     }
@@ -308,18 +532,30 @@ app.openapi(
           },
         },
       },
+      401: unauthorizedResponse,
     },
   }),
   async (c) => {
+    const session = await getCurrentSession(c)
+    if (!session) {
+      return c.json({ error: 'Authentication required' }, 401)
+    }
+
     const { id } = c.req.valid('param')
     const db = createDb(c.env.DB)
-    const [existing] = await db.select().from(submissions).where(eq(submissions.id, id)).limit(1)
+    const [existing] = await db
+      .select()
+      .from(submissions)
+      .where(and(eq(submissions.id, id), eq(submissions.userId, session.user.id)))
+      .limit(1)
 
     if (!existing) {
       return c.json({ error: 'Submission not found' }, 404)
     }
 
-    await db.delete(submissions).where(eq(submissions.id, id))
+    await db
+      .delete(submissions)
+      .where(and(eq(submissions.id, id), eq(submissions.userId, session.user.id)))
     return c.body(null, 204)
   },
 )
@@ -356,12 +592,22 @@ app.openapi(
           },
         },
       },
+      401: unauthorizedResponse,
     },
   }),
   async (c) => {
+    const session = await getCurrentSession(c)
+    if (!session) {
+      return c.json({ error: 'Authentication required' }, 401)
+    }
+
     const { id } = c.req.valid('param')
     const db = createDb(c.env.DB)
-    const [submission] = await db.select().from(submissions).where(eq(submissions.id, id)).limit(1)
+    const [submission] = await db
+      .select()
+      .from(submissions)
+      .where(and(eq(submissions.id, id), eq(submissions.userId, session.user.id)))
+      .limit(1)
 
     if (!submission) {
       return c.json({ error: 'Submission not found' }, 404)

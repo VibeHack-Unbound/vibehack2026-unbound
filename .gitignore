@@ -17,3 +17,5 @@ web/todos.json
 
 .wrangler
 **/.wrangler
+
+api/.env*
