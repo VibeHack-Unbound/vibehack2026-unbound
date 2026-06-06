@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { BottomNav } from '../components/BottomNav'
 import { CatIllustration } from '../components/CatIllustration'
 import { PhoneShell } from '../components/PhoneShell'
@@ -17,7 +17,6 @@ function formatDate(dateStr: string) {
 }
 
 function DashboardPage() {
-  const navigate = useNavigate()
   const latest = getLatestEntry()
   const tier = scoreToTier(latest.score)
   const tierInfo = TIERS[tier]
@@ -85,18 +84,9 @@ function DashboardPage() {
             </div>
           </div>
 
-          {/* Right column – cat */}
+          {/* Right column – cat (weekly trend analysis, no interaction) */}
           <div className="cat-column">
-            <div
-              className="speech-bubble"
-              onClick={() => navigate({ to: '/today' })}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && navigate({ to: '/today' })}
-            >
-              how are you feeling today?
-            </div>
-            <CatIllustration tier={tier} size={150} />
+            <CatIllustration tier={tier} size={150} className={`cat-idle cat-idle-${tier}`} />
           </div>
         </div>
 

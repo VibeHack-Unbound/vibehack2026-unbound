@@ -183,6 +183,41 @@ h1, h2, h3, h4 { margin: 0; font-weight: 750; letter-spacing: -0.01em; }
   color: white;
 }
 
+/* Today tab nudge tooltip */
+.today-nudge {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--fg);
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 650;
+  white-space: nowrap;
+  border-radius: 12px;
+  padding: 7px 12px;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgb(44 62 53 / 25%);
+  animation: nudge-in 350ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  z-index: 40;
+}
+
+.today-nudge::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--fg);
+  border-bottom: 0;
+}
+
+@keyframes nudge-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 /* ── Cards ──────────────────────────────────────────────────────────── */
 .card {
   border: 1.5px solid var(--border);
@@ -501,6 +536,27 @@ h1, h2, h3, h4 { margin: 0; font-weight: 750; letter-spacing: -0.01em; }
 .cal-cell.no-entry {
   background: #E8E8E8;
   color: var(--muted);
+}
+
+/* Today cell with no entry: show a "+" hint */
+.cal-cell.today.no-entry {
+  cursor: pointer;
+}
+
+.cal-today-plus {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: var(--fg);
+  opacity: 0.55;
+  line-height: 1;
+}
+
+/* Taller sheet for check-in input */
+.sheet-panel-tall {
+  max-height: 92vh;
 }
 
 /* ── Day Detail Sheet ───────────────────────────────────────────────── */
@@ -931,6 +987,45 @@ h1, h2, h3, h4 { margin: 0; font-weight: 750; letter-spacing: -0.01em; }
 
 .cat-float { animation: cat-float 3s ease-in-out infinite; }
 .cat-celebrate { animation: cat-celebrate 0.8s ease both; }
+
+/* ── Tier-based idle animations (home cat = analysis result) ──────────── */
+/* Tier 1 – coping well: gentle float + slight breathe */
+@keyframes cat-idle-1 {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  30%       { transform: translateY(-7px) scale(1.02); }
+  60%       { transform: translateY(-4px) scale(1.01); }
+}
+/* Tier 2 – coping ok: soft bob */
+@keyframes cat-idle-2 {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-5px); }
+}
+/* Tier 3 – mild watch: slow side sway */
+@keyframes cat-idle-3 {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25%       { transform: translateY(-3px) rotate(-1.5deg); }
+  75%       { transform: translateY(-2px) rotate(1.5deg); }
+}
+/* Tier 4 – watch: slow heavy breathe, barely moves */
+@keyframes cat-idle-4 {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50%       { transform: translateY(-2px) scale(0.98); }
+}
+/* Tier 5 – need support: very subtle tremble */
+@keyframes cat-idle-5 {
+  0%, 100% { transform: translateX(0px); }
+  20%       { transform: translateX(-1.5px); }
+  40%       { transform: translateX(1.5px); }
+  60%       { transform: translateX(-1px); }
+  80%       { transform: translateX(1px); }
+}
+
+.cat-idle   { display: block; }
+.cat-idle-1 { animation: cat-idle-1 3.5s ease-in-out infinite; }
+.cat-idle-2 { animation: cat-idle-2 4s ease-in-out infinite; }
+.cat-idle-3 { animation: cat-idle-3 5s ease-in-out infinite; }
+.cat-idle-4 { animation: cat-idle-4 6s ease-in-out infinite; }
+.cat-idle-5 { animation: cat-idle-5 2.5s ease-in-out infinite; }
 
 /* ── Onboarding / Auth ───────────────────────────────────────────────── */
 .onboarding-screen {

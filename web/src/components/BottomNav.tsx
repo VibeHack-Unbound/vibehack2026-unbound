@@ -1,4 +1,6 @@
 import { Link, useRouterState } from '@tanstack/react-router'
+import { useState, useEffect } from 'react'
+import { getTodayEntry } from '../lib/meiData'
 
 function HomeIcon() {
   return (
@@ -7,6 +9,7 @@ function HomeIcon() {
     </svg>
   )
 }
+
 function CalendarIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -17,6 +20,7 @@ function CalendarIcon() {
     </svg>
   )
 }
+
 function SupportIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -24,6 +28,7 @@ function SupportIcon() {
     </svg>
   )
 }
+
 function CatIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor">
@@ -32,28 +37,93 @@ function CatIcon() {
   )
 }
 
-const navItems = [
-  { icon: <HomeIcon />, label: 'home', to: '/dashboard', isCat: false },
-  { icon: <CalendarIcon />, label: 'calendar', to: '/calendar', isCat: false },
-  { icon: <CatIcon />, label: 'today', to: '/today', isCat: true },
-  { icon: <SupportIcon />, label: 'support', to: '/connect', isCat: false },
-] as const
+const NUDGE_KEY = 'unbound_today_nudge_dismissed'
+
+function getTodayKey() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function shouldShowNudge(): boolean {
+  // Only show if today has no entry yet
+  const todayEntry = getTodayEntry()
+  if (todayEntry) return false
+  // And user hasn't dismissed it today
+  try {
+    const dismissed = localStorage.getItem(NUDGE_KEY)
+    return dismissed !== getTodayKey()
+  } catch {
+    return true
+  }
+}
 
 export function BottomNav() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const [showNudge, setShowNudge] = useState(false)
+
+  useEffect(() => {
+    // Small delay so the nudge appears naturally after page load
+    const t = setTimeout(() => {
+      setShowNudge(shouldShowNudge())
+    }, 900)
+    return () => clearTimeout(t)
+  }, [pathname])
+
+  function dismissNudge() {
+    try {
+      localStorage.setItem(NUDGE_KEY, getTodayKey())
+    } catch { /* ignore */ }
+    setShowNudge(false)
+  }
+
   return (
     <nav className="bottom-nav" aria-label="App navigation">
-      {navItems.map((item) => (
-        <Link
-          className={`bottom-nav-item${item.isCat ? ' cat-tab' : ''}`}
-          data-active={pathname === item.to || (item.to === '/dashboard' && pathname === '/')}
-          key={item.to}
-          to={item.to}
-        >
-          {item.icon}
-          <strong>{item.label}</strong>
-        </Link>
-      ))}
+      {/* Home */}
+      <Link
+        className="bottom-nav-item"
+        data-active={pathname === '/dashboard' || pathname === '/'}
+        to="/dashboard"
+      >
+        <HomeIcon />
+        <strong>home</strong>
+      </Link>
+
+      {/* Calendar */}
+      <Link
+        className="bottom-nav-item"
+        data-active={pathname === '/calendar'}
+        to="/calendar"
+      >
+        <CalendarIcon />
+        <strong>calendar</strong>
+      </Link>
+
+      {/* Today – prominent cat tab with nudge tooltip */}
+      <Link
+        className="bottom-nav-item cat-tab"
+        data-active={pathname === '/today'}
+        to="/today"
+        onClick={dismissNudge}
+        aria-label="log today"
+      >
+        <CatIcon />
+        <strong>today</strong>
+
+        {showNudge && (
+          <div className="today-nudge" aria-live="polite">
+            how are you feeling today?
+          </div>
+        )}
+      </Link>
+
+      {/* Support */}
+      <Link
+        className="bottom-nav-item"
+        data-active={pathname === '/connect'}
+        to="/connect"
+      >
+        <SupportIcon />
+        <strong>support</strong>
+      </Link>
     </nav>
   )
 }
