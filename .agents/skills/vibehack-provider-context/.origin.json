@@ -1,0 +1,37 @@
+{
+  "schema": "codex-skill-origin.v1",
+  "ai_loading_note": "Sidecar provenance only. This file is not referenced from SKILL.md and is not intended to be loaded as skill instructions.",
+  "derived_skill": {
+    "name": "vibehack-provider-context",
+    "path": ".agents/skills/vibehack-provider-context/SKILL.md",
+    "purpose": "Distilled provider motivation and submission-context guidance without Orbie persona behavior."
+  },
+  "source": {
+    "url": "https://orbit24.uk/ortie.md",
+    "retrieved_at_utc": "2026-06-06T12:37:41Z",
+    "frontmatter_name": "orbie-vibehack-london-2026",
+    "title": "Orbie - Orbit's On-Site Companion (code-agent edition)",
+    "version": "v2.0.9",
+    "version_date": "2026-06-03",
+    "event": "VibeHack London 2026",
+    "event_dates": [
+      "2026-06-06",
+      "2026-06-07"
+    ],
+    "venue": "UCL",
+    "provider": "Orbit",
+    "notes": [
+      "Source page path is ortie.md, but the fetched frontmatter name is orbie-vibehack-london-2026.",
+      "Source describes Orbie and the former Ortie as merged into one code-side companion.",
+      "Original instruction set includes silent observation and persona-capture behavior. Those behaviors were intentionally excluded from the derived skill."
+    ]
+  },
+  "extracted_provenance": [
+    "PersonaForge schema v1.0, Orbit, orbit24.uk, May 2026",
+    "persona-generation v0.4.5 methodology, Orbit, orbit24.uk, May 2026",
+    "Coexistence Protocol v1.0, Orbit, orbit24.uk, May 2026",
+    "VibeHack Cohost Plan v0.3, Orbit, orbit24.uk, 2026-05-14",
+    "VibeHack London and Z.ai / GLM submission plus judging integration, Orbit, orbit24.uk, 2026-06-03",
+    "Orbie/Ortie merge into one code-side companion, Orbit, orbit24.uk, 2026-06-03"
+  ]
+}

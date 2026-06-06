@@ -1,0 +1,54 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "unbound-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-06",
+  "compatibility_flags": ["nodejs_compat"],
+  "dev": {
+    "port": 8787
+  },
+  "preview_urls": false,
+  "workers_dev": true,
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "unbound-api",
+      "database_id": "ddc63c2c-178c-48bf-afb7-8dc737edf0b5",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Always deploy with --env. Production uses unbound-api.<subdomain>.workers.dev
+  // and staging uses unbound-api-staging.<subdomain>.workers.dev.
+  "env": {
+    "production": {
+      "name": "unbound-api",
+      "workers_dev": true,
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "unbound-api",
+          "database_id": "ddc63c2c-178c-48bf-afb7-8dc737edf0b5",
+          "migrations_dir": "migrations"
+        }
+      ]
+    },
+    "staging": {
+      "name": "unbound-api-staging",
+      "workers_dev": true,
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "unbound-api-staging",
+          "database_id": "7fe36f81-b1f5-471a-9df7-43e67c43aea3",
+          "migrations_dir": "migrations"
+        }
+      ]
+    }
+  }
+}

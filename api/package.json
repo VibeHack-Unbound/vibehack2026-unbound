@@ -1,0 +1,37 @@
+{
+  "name": "unbound-api",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "dev": "pnpm run db:migrate:local && wrangler dev --local --port 8787",
+    "deploy": "pnpm run deploy:production",
+    "deploy:production": "pnpm run db:migrate:production && wrangler deploy --minify --env production",
+    "deploy:staging": "pnpm run db:migrate:staging && wrangler deploy --minify --env staging",
+    "cf-typegen": "wrangler types",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply unbound-api --local",
+    "db:migrate:remote": "wrangler d1 migrations apply unbound-api --remote --env production",
+    "db:migrate:production": "wrangler d1 migrations apply unbound-api --remote --env production",
+    "db:migrate:staging": "wrangler d1 migrations apply unbound-api-staging --remote --env staging"
+  },
+  "dependencies": {
+    "@hono/swagger-ui": "latest",
+    "@hono/zod-openapi": "latest",
+    "@scalar/hono-api-reference": "latest",
+    "drizzle-orm": "^0.45.1",
+    "hono": "latest",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "latest",
+    "drizzle-kit": "^0.31.9",
+    "typescript": "^6.0.2",
+    "wrangler": "catalog:"
+  }
+}
