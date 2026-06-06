@@ -8,7 +8,7 @@
     }
   },
   "scripts": {
-    "dev": "pnpm run db:migrate:local && wrangler dev --local --port 8787",
+    "dev": "pnpm run db:migrate:local && wrangler dev --local --port 8787 --env-file=.env",
     "deploy": "pnpm run deploy:production",
     "deploy:production": "pnpm run db:migrate:production && wrangler deploy --minify --env production",
     "deploy:staging": "pnpm run db:migrate:staging && wrangler deploy --minify --env staging",

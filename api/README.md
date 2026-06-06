@@ -13,7 +13,7 @@ pnpm --filter unbound-api deploy:staging
 pnpm --filter unbound-api deploy:production
 ```
 
-`dev` runs local D1 migrations before starting Wrangler. `deploy:staging` and `deploy:production` run their matching remote D1 migrations before deploying the Worker.
+`dev` runs local D1 migrations before starting Wrangler with `--env-file=.env`. Local API secrets belong in `api/.env`; do not use `api/.dev.vars`. `deploy:staging` and `deploy:production` run their matching remote D1 migrations before deploying the Worker.
 
 ## Docs
 

@@ -54,6 +54,8 @@ Local dev URLs:
 - API docs: <http://localhost:8787/docs>
 - API docs (Swagger): <http://localhost:8787/swagger>
 
+Local API secrets belong in `api/.env`. The API dev script passes that file to Wrangler with `--env-file=.env`; `api/.dev.vars` is not used.
+
 Wrangler is installed locally as a dev dependency when `pnpm install` runs. Use it through pnpm so the workspace version is used:
 
 ```bash
