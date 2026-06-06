@@ -229,7 +229,7 @@ function AppPage() {
       <section className="mx-auto max-w-6xl px-6 py-10">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-950">App</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-950">App test</h1>
             <p className="mt-2 text-slate-600">
               Overview for status. Journal for notes and reflections.
             </p>
