@@ -1,0 +1,27 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "unbound",
+  "compatibility_date": "2026-06-06",
+  "preview_urls": false,
+  "workers_dev": true,
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  },
+  "main": "@tanstack/react-start/server-entry",
+  "compatibility_flags": ["nodejs_compat"],
+  // Always deploy with --env. Production uses unbound.<subdomain>.workers.dev
+  // and staging uses unbound-staging.<subdomain>.workers.dev.
+  "env": {
+    "production": {
+      "name": "unbound",
+      "workers_dev": true
+    },
+    "staging": {
+      "name": "unbound-staging",
+      "workers_dev": true
+    }
+  }
+}

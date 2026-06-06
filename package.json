@@ -1,0 +1,27 @@
+{
+  "name": "unbound",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --parallel --filter unbound-web --filter unbound-api dev",
+    "dev:web": "pnpm --filter unbound-web dev",
+    "dev:api": "pnpm --filter unbound-api dev",
+    "build": "pnpm --filter unbound-web build && pnpm --filter unbound-api typecheck",
+    "deploy": "pnpm deploy:production",
+    "deploy:production": "pnpm --filter unbound-api deploy:production && pnpm --filter unbound-web deploy:production",
+    "deploy:staging": "pnpm --filter unbound-api deploy:staging && pnpm --filter unbound-web deploy:staging",
+    "deploy:api:production": "pnpm --filter unbound-api deploy:production",
+    "deploy:api:staging": "pnpm --filter unbound-api deploy:staging",
+    "deploy:web:production": "pnpm --filter unbound-web deploy:production",
+    "deploy:web:staging": "pnpm --filter unbound-web deploy:staging",
+    "preview": "pnpm --filter unbound-web preview",
+    "test": "pnpm --filter unbound-web test",
+    "typecheck": "pnpm --filter unbound-web typecheck && pnpm --filter unbound-api typecheck",
+    "lint": "pnpm --filter unbound-web lint",
+    "lint:fix": "pnpm --filter unbound-web lint:fix",
+    "format": "pnpm --filter unbound-web format",
+    "format:check": "pnpm --filter unbound-web format:check",
+    "check": "pnpm lint && pnpm format:check"
+  },
+  "packageManager": "pnpm@11.1.2"
+}
