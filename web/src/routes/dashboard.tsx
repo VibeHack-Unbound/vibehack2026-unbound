@@ -1,87 +1,147 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-
 import { BottomNav } from '../components/BottomNav'
+import { CatIllustration } from '../components/CatIllustration'
 import { PhoneShell } from '../components/PhoneShell'
-
-import type { CSSProperties } from 'react'
-
-const moodData = [
-  { day: 'Mon', logged: true, mood: 3 },
-  { day: 'Tue', logged: true, mood: 2 },
-  { day: 'Wed', logged: true, mood: 2 },
-  { day: 'Thu', logged: true, mood: 4 },
-  { day: 'Fri', logged: true, mood: 3 },
-  { day: 'Sat', logged: false, mood: 5 },
-  { day: 'Sun', logged: true, mood: 4 },
-]
-
-const moodLabels: Record<number, string> = {
-  1: '😔',
-  2: '😕',
-  3: '😐',
-  4: '🙂',
-  5: '😊',
-}
+import { MEI_DATA, getLatestEntry } from '../lib/meiData'
+import { TIERS, scoreToTier } from '../lib/tierSystem'
 
 export const Route = createFileRoute('/dashboard')({
   component: DashboardPage,
 })
 
+const DAY_LABELS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr)
+  return DAY_LABELS[d.getDay()]
+}
+
 function DashboardPage() {
   const navigate = useNavigate()
-  const loggedCount = moodData.filter((day) => day.logged).length
-  const insights = [
-    { color: '#D9C9E8', icon: '😴', text: 'You slept well 4 out of 7 days' },
-    { color: '#F5C5D1', icon: '💭', text: 'Loneliness was your most common stressor this week' },
-    { color: '#5B9FD8', icon: '📉', text: 'Your mood tends to dip mid-week' },
-  ]
+  const latest = getLatestEntry()
+  const tier = scoreToTier(latest.score)
+  const tierInfo = TIERS[tier]
+
+  // Last 7 days (or all available if fewer)
+  const last7 = MEI_DATA.slice(-7)
 
   return (
     <PhoneShell withNav>
-      <div className="screen dashboard-screen">
-        <header className="page-copy">
-          <h1>Your week at a glance</h1>
-          <p>{loggedCount} days logged</p>
+      <div className="screen page-enter">
+        {/* Header */}
+        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h1 className="page-title">hi, mei 👋</h1>
+            <p className="page-subtitle">here's how you've been doing</p>
+          </div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', textAlign: 'right' }}>
+            {new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toLowerCase()}
+          </div>
         </header>
 
-        <section className="chart-card">
-          <div className="chart-grid" aria-label="Mood this week">
-            {moodData.map((day) => (
-              <div className="chart-column" key={day.day}>
-                <span style={{ height: `${day.mood * 18 + 10}%` }} />
-                <strong>{day.day}</strong>
+        {/* Two-column layout */}
+        <div className="dashboard-two-col">
+          {/* Left column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Wellness score ring */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+              <span className="section-label">wellness score</span>
+              <div
+                className="wellness-score-ring"
+                style={{ color: tierInfo.colour, borderColor: tierInfo.colour }}
+              >
+                {latest.score}
+                <small>/ 100</small>
               </div>
-            ))}
+              <span
+                style={{
+                  display: 'inline-block',
+                  borderRadius: 999,
+                  padding: '3px 10px',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  background: tierInfo.colour,
+                  color: tier === 3 ? '#2C3E35' : tier === 4 ? '#2C3E35' : 'white',
+                }}
+              >
+                {tierInfo.label}
+              </span>
+            </div>
+
+            {/* AI summary */}
+            <div className="card card-pad" style={{ gap: 8 }}>
+              <span className="section-label">this week</span>
+              <p className="ai-summary">
+                you have been {tierInfo.label} this week. exam stress mentioned {MEI_DATA.filter(d => d.stressTags.includes('exams')).length} times.
+              </p>
+            </div>
+
+            {/* Recommendation */}
+            <div
+              className="recommendation-card"
+              style={{ background: `${tierInfo.colour}22`, border: `1.5px solid ${tierInfo.colour}66` }}
+            >
+              {tierInfo.recommendation}
+            </div>
           </div>
-        </section>
 
-        <section className="insight-list">
-          {insights.map((insight) => (
-            <article className="prototype-card insight-card" key={insight.text} style={{ '--accent': insight.color } as CSSProperties}>
-              <span>{insight.icon}</span>
-              <p>{insight.text}</p>
-            </article>
-          ))}
-        </section>
-
-        <section className="calendar-section">
-          <h2>Your week at a glance</h2>
-          <div className="calendar-row">
-            {moodData.map((day) => (
-              <div className="calendar-cell" data-logged={day.logged} key={day.day}>
-                <strong>{day.logged ? moodLabels[day.mood] : '—'}</strong>
-                <span>{day.day}</span>
-              </div>
-            ))}
+          {/* Right column – cat */}
+          <div className="cat-column">
+            <div
+              className="speech-bubble"
+              onClick={() => navigate({ to: '/today' })}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && navigate({ to: '/today' })}
+            >
+              how are you feeling today?
+            </div>
+            <CatIllustration tier={tier} size={150} />
           </div>
-        </section>
+        </div>
 
-        <section className="support-banner">
-          <p>You&apos;ve seemed really drained lately. You don&apos;t have to figure this out alone.</p>
-          <button className="primary-action small" onClick={() => navigate({ to: '/connect' })} type="button">
-            Find a therapist nearby →
-          </button>
-        </section>
+        {/* Last 7 days bar chart */}
+        <div className="card card-pad">
+          <span className="section-label" style={{ display: 'block', marginBottom: 10 }}>last 7 days</span>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', height: 64 }}>
+            {last7.map((entry) => {
+              const t = scoreToTier(entry.score)
+              const colour = TIERS[t].colour
+              const heightPct = Math.max(20, entry.score)
+              return (
+                <div key={entry.date} className="week-bar-col" style={{ flex: 1 }}>
+                  <div
+                    className="week-dot"
+                    style={{
+                      height: `${heightPct * 0.56}px`,
+                      background: colour,
+                      width: '100%',
+                    }}
+                  />
+                  <div className="week-dot-label">{formatDate(entry.date)}</div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Tier 5 safety card – hard requirement, always visible when tier 5 */}
+        {tier === 5 && (
+          <div className="tier5-safety-card">
+            <h3>you don't have to face this alone</h3>
+            <p>we've noticed you might need some extra support right now. please reach out — help is available 24/7.</p>
+            <div className="crisis-btns">
+              <a href="tel:116123" className="crisis-btn call">
+                📞 samaritans<br />
+                <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>116 123</span>
+              </a>
+              <a href="sms:85258" className="crisis-btn text">
+                💬 shout<br />
+                <span style={{ fontSize: '0.9rem', fontWeight: 800 }}>text 85258</span>
+              </a>
+            </div>
+          </div>
+        )}
       </div>
       <BottomNav />
     </PhoneShell>

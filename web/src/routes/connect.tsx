@@ -1,98 +1,140 @@
 import { createFileRoute } from '@tanstack/react-router'
-
 import { BottomNav } from '../components/BottomNav'
 import { PhoneShell } from '../components/PhoneShell'
-
-const therapists = [
-  {
-    avatarColor: '#D4E89E',
-    initials: 'YP',
-    languages: ['English', '한국어'],
-    name: 'Dr. Yuna Park',
-    specialty: 'Specialises in anxiety and cultural adjustment',
-    tags: ['NHS Free', 'Online'],
-  },
-  {
-    avatarColor: '#F5C5D1',
-    initials: 'MO',
-    languages: ['English', 'Français'],
-    name: 'Marcus Osei',
-    specialty: 'Specialises in depression and international student wellbeing',
-    tags: ['Private', 'Online'],
-  },
-  {
-    avatarColor: '#D9C9E8',
-    initials: 'AR',
-    languages: ['English', 'العربية', 'Urdu'],
-    name: 'Aisha Rahman',
-    specialty: 'Specialises in trauma, identity, and belonging',
-    tags: ['NHS Free'],
-  },
-]
 
 export const Route = createFileRoute('/connect')({
   component: ConnectPage,
 })
 
+interface Resource {
+  name: string
+  category: string
+  description: string
+  phone?: string
+  website?: string
+  languages?: string[]
+  categoryColour: string
+}
+
+const RESOURCES: Resource[] = [
+  {
+    name: 'samaritans',
+    category: 'crisis line',
+    description: 'free, confidential listening 24 hours a day, 7 days a week.',
+    phone: '116 123',
+    website: 'samaritans.org',
+    languages: ['english'],
+    categoryColour: '#F2B8C6',
+  },
+  {
+    name: 'nhs talking therapies',
+    category: 'clinical referral',
+    description: 'free nhs therapy for anxiety and depression. self-refer online or by phone.',
+    phone: '0300 123 3393',
+    website: 'nhs.uk',
+    languages: ['english'],
+    categoryColour: '#80B0E8',
+  },
+  {
+    name: 'student space',
+    category: 'university support',
+    description: 'dedicated mental health support for uk students. free and confidential.',
+    phone: '0800 138 8598',
+    website: 'studentspace.org.uk',
+    languages: ['english'],
+    categoryColour: '#C3B8E8',
+  },
+  {
+    name: 'shout',
+    category: 'crisis text',
+    description: 'free, confidential crisis text support. text shout to 85258 any time.',
+    phone: 'text SHOUT to 85258',
+    languages: ['english'],
+    categoryColour: '#F2D06B',
+  },
+  {
+    name: 'betterhelp',
+    category: 'online therapy',
+    description: 'connect with a licensed therapist online. flexible and multilingual.',
+    website: 'betterhelp.com',
+    languages: ['english', '中文', 'español', 'français', '한국어'],
+    categoryColour: '#D4E89E',
+  },
+  {
+    name: 'mind',
+    category: 'community',
+    description: 'mental health charity offering information, advice, and local support.',
+    website: 'mind.org.uk',
+    languages: ['english'],
+    categoryColour: '#C4B5A5',
+  },
+]
+
 function ConnectPage() {
   return (
     <PhoneShell withNav>
-      <div className="screen support-screen">
-        <section className="support-banner hero">
-          <span>🌿</span>
-          <div>
-            <p>You&apos;ve seemed really drained lately. You don&apos;t have to figure this out alone.</p>
-            <small>Find immediate help or a professional below.</small>
-          </div>
-        </section>
+      <div className="screen page-enter">
+        <header>
+          <h1 className="page-title">support</h1>
+          <p className="support-intro">you are not alone. here are people who can help.</p>
+        </header>
 
-        <section className="prototype-card talk-card">
-          <h1>Talk to someone now</h1>
-          <div>
-            <a className="primary-action small" href="tel:116123">
-              Samaritans
-              <br />
-              116 123
-            </a>
-            <a className="primary-action small warm" href="sms:85258">
-              Shout
-              <br />
-              85258
-            </a>
-          </div>
-        </section>
+        <div className="support-grid">
+          {RESOURCES.map((r) => (
+            <div key={r.name} className="support-card">
+              <span
+                className="support-card-category"
+                style={{ background: `${r.categoryColour}44`, color: 'var(--fg)' }}
+              >
+                {r.category}
+              </span>
+              <h3>{r.name}</h3>
+              <p>{r.description}</p>
 
-        <section className="therapist-section">
-          <h2>Find a therapist nearby</h2>
-          {therapists.map((therapist) => (
-            <article className="therapist-card" key={therapist.name}>
-              <div className="avatar" style={{ background: therapist.avatarColor }}>
-                {therapist.initials}
+              <div className="support-card-actions">
+                {r.phone && (
+                  <a
+                    href={r.phone.startsWith('text') ? `sms:85258` : `tel:${r.phone.replace(/\s/g, '')}`}
+                    className="support-link"
+                  >
+                    📞 {r.phone}
+                  </a>
+                )}
+                {r.website && (
+                  <a
+                    href={`https://${r.website}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="support-link"
+                  >
+                    🌐 {r.website}
+                  </a>
+                )}
               </div>
-              <div>
-                <h3>{therapist.name}</h3>
-                <p>{therapist.specialty}</p>
-                <div className="tag-row">
-                  {therapist.tags.map((tag) => (
-                    <span key={tag}>{tag}</span>
+
+              {r.languages && r.languages.length > 1 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 4 }}>
+                  {r.languages.map(lang => (
+                    <span key={lang} className="lang-tag">{lang}</span>
                   ))}
                 </div>
-                <small>{therapist.languages.join(' · ')}</small>
-              </div>
-            </article>
+              )}
+            </div>
           ))}
-        </section>
+        </div>
 
-        <section className="summary-card">
-          <h2>Your recent summary</h2>
-          <p>
-            We&apos;ll prepare a short summary of your recent entries in English so you do not have to
-            explain everything from scratch.
-          </p>
-          <button className="primary-action small" type="button">
-            Learn more
-          </button>
-        </section>
+        {/* Bottom note */}
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: '0.75rem',
+            color: 'var(--muted)',
+            lineHeight: 1.5,
+            padding: '0 8px',
+          }}
+        >
+          all resources are free or low-cost. you deserve support in your own language.
+        </div>
       </div>
       <BottomNav />
     </PhoneShell>

@@ -1,27 +1,29 @@
-import { HeadContent, Link, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
-
+import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
 import appCss from '../styles.css?url'
-
 import type { ReactNode } from 'react'
 
 export const Route = createRootRoute({
   head: () => ({
     meta: [
-      {
-        charSet: 'utf-8',
-      },
-      {
-        name: 'viewport',
-        content: 'width=device-width, initial-scale=1',
-      },
-      {
-        title: 'Unbound',
-      },
+      { charSet: 'utf-8' },
+      { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1' },
+      { name: 'theme-color', content: '#FAF6F0' },
+      { title: 'unbound — emotional wellness' },
     ],
     links: [
+      { rel: 'stylesheet', href: appCss },
+      {
+        rel: 'preconnect',
+        href: 'https://fonts.googleapis.com',
+      },
+      {
+        rel: 'preconnect',
+        href: 'https://fonts.gstatic.com',
+        crossOrigin: 'anonymous',
+      },
       {
         rel: 'stylesheet',
-        href: appCss,
+        href: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap',
       },
     ],
   }),
@@ -29,30 +31,13 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
-function AppRoot() {
-  return <Outlet />
-}
-
 function RootDocument({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-screen bg-white text-slate-950 antialiased">
-        <header className="border-b border-slate-200 bg-white">
-          <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-            <Link to="/" className="text-lg font-semibold tracking-tight text-slate-950">
-              Unbound
-            </Link>
-            <Link
-              to="/app"
-              className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              Open app
-            </Link>
-          </nav>
-        </header>
+      <body>
         {children}
         <Scripts />
       </body>
@@ -62,20 +47,16 @@ function RootDocument({ children }: { children: ReactNode }) {
 
 function NotFoundPage() {
   return (
-    <main className="min-h-[calc(100vh-73px)] bg-slate-50">
-      <section className="mx-auto max-w-3xl px-6 py-20">
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">404</p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-950">Page not found</h1>
-        <p className="mt-4 max-w-xl text-lg leading-8 text-slate-600">
-          The page you requested does not exist. Return home or open the app from the navigation.
-        </p>
-        <Link
-          to="/"
-          className="mt-8 inline-flex rounded-md bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-        >
-          Go home
-        </Link>
-      </section>
+    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF6F0' }}>
+      <div style={{ textAlign: 'center', padding: '32px' }}>
+        <p style={{ fontSize: '0.8rem', color: '#A89F94', fontWeight: 700, marginBottom: 8 }}>404</p>
+        <h1 style={{ fontSize: '1.5rem', color: '#2C3E35', marginBottom: 12 }}>page not found</h1>
+        <a href="/dashboard" style={{ color: '#80B0E8', fontWeight: 700 }}>go home →</a>
+      </div>
     </main>
   )
+}
+
+export function AppRoot() {
+  return <Outlet />
 }
