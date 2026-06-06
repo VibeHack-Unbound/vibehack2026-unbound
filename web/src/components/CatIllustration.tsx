@@ -290,44 +290,37 @@ function CatWrapped({ size }: { size: number }) {
   )
 }
 
+// Cat image URLs for each tier (uploaded cat avatar photos from design team)
+const CAT_TIER_IMAGES: Record<number, string> = {
+  1: '/manus-storage/cat4_283e8e9c.png',  // superhero cat flying — coping well
+  2: '/manus-storage/cat2_214e4198.png',  // dancing with scarf — coping ok
+  3: '/manus-storage/cat7_7e3387d4.png',  // hanging from hanger — mild watch
+  4: '/manus-storage/cat6_54d6f974.png',  // curled up loaf — watch
+  5: '/manus-storage/cat9_064d2a42.png',  // overwhelmed, wide eyes — need support
+}
+
 export function CatIllustration({ tier = 1, size = 160, className = '' }: CatIllustrationProps) {
   const catClass = `cat-float ${className}`
-  switch (tier) {
-    case 1:
-      return (
-        <div className={catClass}>
-          <CatFloating size={size} />
-        </div>
-      )
-    case 2:
-      return (
-        <div className={catClass}>
-          <CatOnCloud size={size} />
-        </div>
-      )
-    case 3:
-      return (
-        <div className={catClass}>
-          <CatHanging size={size} />
-        </div>
-      )
-    case 4:
-      return (
-        <div className={catClass}>
-          <CatCurled size={size} />
-        </div>
-      )
-    case 5:
-      return (
-        <div className={catClass}>
-          <CatWrapped size={size} />
-        </div>
-      )
-    default:
-      return (
-        <div className={catClass}>
-          <CatFloating size={size} />
-        </div>
-      )
+  const imgSrc = CAT_TIER_IMAGES[tier] ?? CAT_TIER_IMAGES[1]
+  const altTexts: Record<number, string> = {
+    1: 'superhero cat flying freely — coping well',
+    2: 'cat dancing with a scarf — coping ok',
+    3: 'cat hanging from a hanger, slightly droopy — mild watch',
+    4: 'cat curled up in a loaf — watch',
+    5: 'cat looking overwhelmed with wide eyes — need support',
   }
+  return (
+    <div
+      className={catClass}
+      style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    >
+      <img
+        src={imgSrc}
+        alt={altTexts[tier] ?? 'cat illustration'}
+        width={size}
+        height={size}
+        style={{ objectFit: 'contain', mixBlendMode: 'multiply' }}
+      />
+    </div>
+  )
 }

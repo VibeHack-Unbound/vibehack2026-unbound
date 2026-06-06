@@ -1,5 +1,22 @@
 import type { Tier } from './tierSystem'
 
+// ── Cat image URLs (uploaded to Manus CDN) ────────────────────────────────
+// Cat avatars provided by the design team, representing each mood tier.
+export const CAT_IMAGES = {
+  tier1: '/manus-storage/cat4_283e8e9c.png',  // superhero cat flying — coping well
+  tier2: '/manus-storage/cat2_214e4198.png',  // dancing with scarf — coping ok
+  tier3: '/manus-storage/cat7_7e3387d4.png',  // hanging from hanger — mild watch
+  tier4: '/manus-storage/cat6_54d6f974.png',  // curled up loaf — watch
+  tier5: '/manus-storage/cat9_064d2a42.png',  // overwhelmed, wide eyes — need support
+  logo: '/manus-storage/logo_4a50b44a.png',   // unbound logo for nav
+  listening: '/manus-storage/cat1_5212e7d7.png', // sitting cat for voice input
+  happy: '/manus-storage/cat3_e03d098a.png',  // friendly cat for support page
+} as const
+
+export function catImageForTier(tier: Tier): string {
+  return CAT_IMAGES[`tier${tier}` as keyof typeof CAT_IMAGES] as string
+}
+
 export interface DayEntry {
   date: string // YYYY-MM-DD
   tier: Tier
@@ -16,8 +33,10 @@ export interface DayEntry {
   }
 }
 
-// Pre-seeded 6 days of demo data for Mei
-// Today is the 6th entry; we build relative to a fixed reference
+// Pre-seeded 6 days of demo data for Li
+// Li, 24. MSc student from China at UCL. Five months into her first year.
+// Homesick, anxious about grades, struggling to sleep.
+// Pattern: declining mid-week (exam stress), slight weekend recovery.
 function dateStr(daysAgo: number): string {
   const d = new Date()
   d.setDate(d.getDate() - daysAgo)
@@ -28,15 +47,15 @@ export const MEI_DATA: DayEntry[] = [
   {
     date: dateStr(6),
     tier: 2,
-    score: 65,
+    score: 68,
     voiceSummary:
-      "mei talked about settling into her new flat in hackney. she mentioned feeling excited but a little overwhelmed by the paperwork. she said she missed her mum's cooking.",
-    stressTags: ['loneliness', 'other'],
+      'li talked about feeling settled after a good weekend. she mentioned her upcoming exams but felt prepared. she cooked a meal that reminded her of home.',
+    stressTags: ['exams'],
     checkIn: {
       ate: 'at least 2 meals',
       energy: 'normal',
       sleep: 'good (7hrs+)',
-      social: 'brief interaction',
+      social: 'had a real conversation',
       focus: 'some focus',
       overall: 'okay',
     },
@@ -44,10 +63,26 @@ export const MEI_DATA: DayEntry[] = [
   {
     date: dateStr(5),
     tier: 3,
-    score: 45,
+    score: 48,
     voiceSummary:
-      'mei mentioned her first seminar was harder than expected because of the pace of english. she felt tired and a bit lost. she did go for a walk in the evening which helped.',
+      'li mentioned feeling tired and a bit lonely. she stayed in the library all day studying and did not eat a proper meal. she said the exam felt closer than she expected.',
     stressTags: ['exams', 'loneliness'],
+    checkIn: {
+      ate: 'snacked only',
+      energy: 'getting by',
+      sleep: 'okay (4–6hrs)',
+      social: 'brief interaction',
+      focus: 'some focus',
+      overall: 'hard',
+    },
+  },
+  {
+    date: dateStr(4),
+    tier: 3,
+    score: 42,
+    voiceSummary:
+      'li felt overwhelmed by revision. she mentioned missing home and a call with her mum that made her emotional. she said she could not focus at all in the afternoon.',
+    stressTags: ['exams', 'family'],
     checkIn: {
       ate: 'snacked only',
       energy: 'getting by',
@@ -58,28 +93,12 @@ export const MEI_DATA: DayEntry[] = [
     },
   },
   {
-    date: dateStr(4),
-    tier: 2,
-    score: 62,
-    voiceSummary:
-      'mei had a good day — she met another international student from hong kong and they had lunch together. she felt more connected and less invisible.',
-    stressTags: ['exams'],
-    checkIn: {
-      ate: 'at least 2 meals',
-      energy: 'normal',
-      sleep: 'good (7hrs+)',
-      social: 'had a real conversation',
-      focus: 'fully focused',
-      overall: 'good',
-    },
-  },
-  {
     date: dateStr(3),
     tier: 4,
-    score: 28,
+    score: 22,
     voiceSummary:
-      "mei received a confusing letter about her student visa and spent hours trying to understand it. she felt anxious and couldn't eat properly. she mentioned feeling very alone.",
-    stressTags: ['other', 'loneliness', 'money'],
+      'li had a really difficult day. she could not sleep, skipped meals, and felt completely blank. she mentioned feeling like she was failing and that no one around her understood.',
+    stressTags: ['exams', 'loneliness', 'health'],
     checkIn: {
       ate: 'nothing',
       energy: 'stuck in bed',
@@ -94,31 +113,31 @@ export const MEI_DATA: DayEntry[] = [
     tier: 3,
     score: 50,
     voiceSummary:
-      'mei called her mum for the first time in a week. she cried a little but felt better afterwards. she has an essay due next week and is feeling the pressure.',
-    stressTags: ['exams', 'family'],
+      'li felt a little better today. she ate two meals and had a brief chat with a classmate. still stressed about exams but slightly more hopeful. she went for a short walk.',
+    stressTags: ['exams'],
     checkIn: {
       ate: 'at least 2 meals',
       energy: 'getting by',
       sleep: 'okay (4–6hrs)',
-      social: 'had a real conversation',
+      social: 'brief interaction',
       focus: 'some focus',
       overall: 'okay',
     },
   },
   {
     date: dateStr(1),
-    tier: 2,
-    score: 68,
+    tier: 3,
+    score: 55,
     voiceSummary:
-      "mei went to the library and got a lot done on her essay. she treated herself to bubble tea. she said she's starting to feel like london might actually be okay.",
+      'li slept better last night and felt more like herself. she is still worried about exams but managed to focus for a few hours. she messaged a friend back home.',
     stressTags: ['exams'],
     checkIn: {
       ate: 'at least 2 meals',
-      energy: 'feeling good',
+      energy: 'normal',
       sleep: 'good (7hrs+)',
       social: 'brief interaction',
-      focus: 'fully focused',
-      overall: 'good',
+      focus: 'some focus',
+      overall: 'okay',
     },
   },
 ]
