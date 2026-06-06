@@ -25,6 +25,7 @@ export const Route = createRootRoute({
       },
     ],
   }),
+  notFoundComponent: NotFoundPage,
   shellComponent: RootDocument,
 })
 
@@ -52,5 +53,25 @@ function RootDocument({ children }: { children: ReactNode }) {
         <Scripts />
       </body>
     </html>
+  )
+}
+
+function NotFoundPage() {
+  return (
+    <main className="min-h-[calc(100vh-73px)] bg-slate-50">
+      <section className="mx-auto max-w-3xl px-6 py-20">
+        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">404</p>
+        <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-950">Page not found</h1>
+        <p className="mt-4 max-w-xl text-lg leading-8 text-slate-600">
+          The page you requested does not exist. Return home or open the app from the navigation.
+        </p>
+        <Link
+          to="/"
+          className="mt-8 inline-flex rounded-md bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+        >
+          Go home
+        </Link>
+      </section>
+    </main>
   )
 }
