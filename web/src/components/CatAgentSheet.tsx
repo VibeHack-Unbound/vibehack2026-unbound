@@ -10,7 +10,7 @@ const prompts = {
   es: '¿Cómo estuvo tu día?',
   fr: "Comment s'est passée ta journée ?",
   ja: '今日はどうだった？',
-  ko: '오늘 하루 어땠어?',
+  ko: '오늘 하루 어땠어??',
   zh: '今天过得怎么样？',
 }
 
