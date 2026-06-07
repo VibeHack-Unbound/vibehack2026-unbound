@@ -16,11 +16,16 @@ export function SiteNav() {
   return (
     <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 backdrop-blur">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 md:px-8">
-        <Link to="/" className="flex items-center gap-3 text-zinc-950 no-underline">
+        <Link
+          to="/"
+          className="flex items-center gap-3 text-zinc-950 no-underline"
+        >
           <span className="grid size-9 place-items-center rounded-md bg-zinc-950 text-sm font-bold text-white">
             U
           </span>
-          <span className="text-base font-semibold tracking-tight">Unbound</span>
+          <span className="text-base font-semibold tracking-tight">
+            Unbound
+          </span>
         </Link>
 
         <div className="flex items-center gap-2">

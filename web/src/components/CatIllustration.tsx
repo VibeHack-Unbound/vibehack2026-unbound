@@ -47,8 +47,18 @@ function CatFloating({ size }: { size: number }) {
         strokeLinecap="round"
         fill="none"
       />
-      <path d="M62 115 Q40 100 28 108" stroke="#2C3E35" strokeWidth="14" strokeLinecap="round" />
-      <path d="M138 115 Q160 100 172 108" stroke="#2C3E35" strokeWidth="14" strokeLinecap="round" />
+      <path
+        d="M62 115 Q40 100 28 108"
+        stroke="#2C3E35"
+        strokeWidth="14"
+        strokeLinecap="round"
+      />
+      <path
+        d="M138 115 Q160 100 172 108"
+        stroke="#2C3E35"
+        strokeWidth="14"
+        strokeLinecap="round"
+      />
       <path
         d="M130 140 Q155 130 158 115 Q162 100 150 98"
         stroke="#2C3E35"
@@ -134,8 +144,18 @@ function CatHanging({ size }: { size: number }) {
         strokeLinejoin="round"
         fill="none"
       />
-      <path d="M72 80 Q65 65 68 50" stroke="#2C3E35" strokeWidth="12" strokeLinecap="round" />
-      <path d="M128 80 Q135 65 132 50" stroke="#2C3E35" strokeWidth="12" strokeLinecap="round" />
+      <path
+        d="M72 80 Q65 65 68 50"
+        stroke="#2C3E35"
+        strokeWidth="12"
+        strokeLinecap="round"
+      />
+      <path
+        d="M128 80 Q135 65 132 50"
+        stroke="#2C3E35"
+        strokeWidth="12"
+        strokeLinecap="round"
+      />
       <ellipse cx="100" cy="126" rx="32" ry="30" fill="#2C3E35" />
       <circle cx="100" cy="86" r="32" fill="#2C3E35" />
       <path d="M76 62 L68 40 L90 56Z" fill="#2C3E35" />
@@ -161,8 +181,18 @@ function CatHanging({ size }: { size: number }) {
         strokeLinecap="round"
         fill="none"
       />
-      <path d="M84 152 L80 172" stroke="#2C3E35" strokeWidth="12" strokeLinecap="round" />
-      <path d="M116 152 L120 172" stroke="#2C3E35" strokeWidth="12" strokeLinecap="round" />
+      <path
+        d="M84 152 L80 172"
+        stroke="#2C3E35"
+        strokeWidth="12"
+        strokeLinecap="round"
+      />
+      <path
+        d="M116 152 L120 172"
+        stroke="#2C3E35"
+        strokeWidth="12"
+        strokeLinecap="round"
+      />
     </svg>
   )
 }
@@ -292,14 +322,18 @@ function CatWrapped({ size }: { size: number }) {
 
 // Cat image URLs for each tier (uploaded cat avatar photos from design team)
 const CAT_TIER_IMAGES: Record<number, string> = {
-  1: '/manus-storage/cat4_283e8e9c.png',  // superhero cat flying — coping well
-  2: '/manus-storage/cat2_214e4198.png',  // dancing with scarf — coping ok
-  3: '/manus-storage/cat7_7e3387d4.png',  // hanging from hanger — mild watch
-  4: '/manus-storage/cat6_54d6f974.png',  // curled up loaf — watch
-  5: '/manus-storage/cat9_064d2a42.png',  // overwhelmed, wide eyes — need support
+  1: '/manus-storage/cat4_283e8e9c.png', // superhero cat flying — coping well
+  2: '/manus-storage/cat2_214e4198.png', // dancing with scarf — coping ok
+  3: '/manus-storage/cat7_7e3387d4.png', // hanging from hanger — mild watch
+  4: '/manus-storage/cat6_54d6f974.png', // curled up loaf — watch
+  5: '/manus-storage/cat9_064d2a42.png', // overwhelmed, wide eyes — need support
 }
 
-export function CatIllustration({ tier = 1, size = 160, className = '' }: CatIllustrationProps) {
+export function CatIllustration({
+  tier = 1,
+  size = 160,
+  className = '',
+}: CatIllustrationProps) {
   const catClass = `cat-float ${className}`
   const imgSrc = CAT_TIER_IMAGES[tier] ?? CAT_TIER_IMAGES[1]
   const altTexts: Record<number, string> = {
@@ -312,7 +346,13 @@ export function CatIllustration({ tier = 1, size = 160, className = '' }: CatIll
   return (
     <div
       className={catClass}
-      style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      style={{
+        width: size,
+        height: size,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
     >
       <img
         src={imgSrc}

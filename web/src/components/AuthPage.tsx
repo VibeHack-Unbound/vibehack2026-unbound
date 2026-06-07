@@ -11,7 +11,10 @@ type AuthPageProps = {
   redirect?: string
 }
 
-function authErrorMessage(error: { message?: string } | null | undefined, fallback: string) {
+function authErrorMessage(
+  error: { message?: string } | null | undefined,
+  fallback: string,
+) {
   return error?.message ?? fallback
 }
 
@@ -28,8 +31,12 @@ export function AuthPage({ mode, redirect }: AuthPageProps) {
     ? 'Start a private workspace for your team notes and submissions.'
     : 'Open your private workspace and keep momentum across sessions.'
   const submitLabel = isRegister ? 'Create account' : 'Log in'
-  const alternateHref = isRegister ? '/login?redirect=/app' : '/register?redirect=/app'
-  const alternateText = isRegister ? 'Already have an account?' : 'Need an account?'
+  const alternateHref = isRegister
+    ? '/login?redirect=/app'
+    : '/register?redirect=/app'
+  const alternateText = isRegister
+    ? 'Already have an account?'
+    : 'Need an account?'
   const alternateAction = isRegister ? 'Log in' : 'Register'
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -55,7 +62,10 @@ export function AuthPage({ mode, redirect }: AuthPageProps) {
 
       if (result.error) {
         setError(
-          authErrorMessage(result.error, isRegister ? 'Could not register' : 'Could not log in'),
+          authErrorMessage(
+            result.error,
+            isRegister ? 'Could not register' : 'Could not log in',
+          ),
         )
         return
       }
@@ -84,7 +94,9 @@ export function AuthPage({ mode, redirect }: AuthPageProps) {
           </div>
 
           <div className="auth-copy">
-            <p className="auth-kicker">{isRegister ? 'Start private' : 'Welcome back'}</p>
+            <p className="auth-kicker">
+              {isRegister ? 'Start private' : 'Welcome back'}
+            </p>
             <h1>{title}</h1>
             <p>{body}</p>
           </div>
@@ -156,7 +168,12 @@ export function AuthPage({ mode, redirect }: AuthPageProps) {
 
           <button
             type="submit"
-            disabled={loading || !email.trim() || !password || (isRegister && !name.trim())}
+            disabled={
+              loading ||
+              !email.trim() ||
+              !password ||
+              (isRegister && !name.trim())
+            }
             className="auth-submit"
           >
             {loading ? 'Working...' : submitLabel}
