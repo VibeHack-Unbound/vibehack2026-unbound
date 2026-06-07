@@ -57,7 +57,8 @@ export function useSpeechRecognition({
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition
+    const Recognition =
+      window.SpeechRecognition ?? window.webkitSpeechRecognition
 
     if (!Recognition) return
 
@@ -69,7 +70,11 @@ export function useSpeechRecognition({
     recognition.onresult = (event) => {
       let finalText = ''
 
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      for (
+        let index = event.resultIndex;
+        index < event.results.length;
+        index += 1
+      ) {
         const result = event.results[index]
 
         if (result?.isFinal) {
