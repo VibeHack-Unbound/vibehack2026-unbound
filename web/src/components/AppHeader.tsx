@@ -38,7 +38,7 @@ export function AppHeader() {
     <header className="app-header">
       <Link
         to="/app/calendar"
-        search={{}}
+        search={{ open: undefined }}
         className="app-header-icon-btn"
         aria-label="calendar"
       >

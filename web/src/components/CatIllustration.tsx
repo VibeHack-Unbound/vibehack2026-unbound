@@ -6,7 +6,7 @@ interface CatIllustrationProps {
   className?: string
 }
 
-function CatFloating({ size }: { size: number }) {
+export function CatFloating({ size }: { size: number }) {
   return (
     <svg
       width={size}
@@ -72,7 +72,7 @@ function CatFloating({ size }: { size: number }) {
   )
 }
 
-function CatOnCloud({ size }: { size: number }) {
+export function CatOnCloud({ size }: { size: number }) {
   return (
     <svg
       width={size}
@@ -119,7 +119,7 @@ function CatOnCloud({ size }: { size: number }) {
   )
 }
 
-function CatHanging({ size }: { size: number }) {
+export function CatHanging({ size }: { size: number }) {
   return (
     <svg
       width={size}
@@ -197,7 +197,7 @@ function CatHanging({ size }: { size: number }) {
   )
 }
 
-function CatCurled({ size }: { size: number }) {
+export function CatCurled({ size }: { size: number }) {
   return (
     <svg
       width={size}
@@ -253,7 +253,7 @@ function CatCurled({ size }: { size: number }) {
   )
 }
 
-function CatWrapped({ size }: { size: number }) {
+export function CatWrapped({ size }: { size: number }) {
   return (
     <svg
       width={size}

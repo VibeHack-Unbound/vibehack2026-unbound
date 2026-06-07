@@ -19,10 +19,13 @@ export function catImageForTier(tier: Tier): string {
 
 export interface DayEntry {
   date: string // YYYY-MM-DD
+  source?: 'manual' | 'voice'
   tier: Tier
   score: number
   voiceSummary: string
+  voiceTranscript?: string
   stressTags: string[]
+  updatedAt?: number
   checkIn: {
     ate: string
     energy: string
@@ -70,7 +73,7 @@ export const MEI_DATA: DayEntry[] = [
     checkIn: {
       ate: 'snacked only',
       energy: 'getting by',
-      sleep: 'okay (4–6hrs)',
+      sleep: 'okay (4-6hrs)',
       social: 'brief interaction',
       focus: 'some focus',
       overall: 'hard',
@@ -86,7 +89,7 @@ export const MEI_DATA: DayEntry[] = [
     checkIn: {
       ate: 'snacked only',
       energy: 'getting by',
-      sleep: 'okay (4–6hrs)',
+      sleep: 'okay (4-6hrs)',
       social: 'no contact',
       focus: 'some focus',
       overall: 'hard',
@@ -118,7 +121,7 @@ export const MEI_DATA: DayEntry[] = [
     checkIn: {
       ate: 'at least 2 meals',
       energy: 'getting by',
-      sleep: 'okay (4–6hrs)',
+      sleep: 'okay (4-6hrs)',
       social: 'brief interaction',
       focus: 'some focus',
       overall: 'okay',

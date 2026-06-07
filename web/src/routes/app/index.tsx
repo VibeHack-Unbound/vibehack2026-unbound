@@ -1,13 +1,14 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { MEI_DATA } from '../../lib/meiData'
+import type { DayEntry } from '../../lib/meiData'
+import { useJournalEntries } from '../../lib/journalStore'
 import { TIERS, scoreToTier } from '../../lib/tierSystem'
 
 export const Route = createFileRoute('/app/')({
   component: HomePage,
 })
 
-function getWeeklyStats() {
-  const last7 = MEI_DATA.slice(-7)
+function getWeeklyStats(entries: DayEntry[]) {
+  const last7 = entries.slice(-7)
   const avgScore = Math.round(
     last7.reduce((s, e) => s + e.score, 0) / last7.length,
   )
@@ -37,7 +38,8 @@ function buildAISummary(
 
 function HomePage() {
   const navigate = useNavigate()
-  const { tier, topTag } = getWeeklyStats()
+  const entries = useJournalEntries()
+  const { tier, topTag } = getWeeklyStats(entries)
   const tierInfo = TIERS[tier]
   const aiSummary = buildAISummary(tier, topTag)
   const todayStr = new Date().toISOString().slice(0, 10)

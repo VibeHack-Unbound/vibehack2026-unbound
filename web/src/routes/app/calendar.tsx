@@ -1,8 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { createFileRoute, useSearch } from '@tanstack/react-router'
-import { CatIllustration } from '../../components/CatIllustration'
-import { MEI_DATA, getEntryByDate } from '../../lib/meiData'
+import {
+  CHECKIN_QUESTIONS,
+  STRESS_TAGS,
+  VIEW_CHECKIN_QUESTIONS,
+} from '../../lib/checkIn'
 import type { DayEntry } from '../../lib/meiData'
+import {
+  getEntryByDateFromEntries,
+  saveJournalEntry,
+  useJournalEntries,
+} from '../../lib/journalStore'
 import { TIERS, scoreToTier } from '../../lib/tierSystem'
 
 export const Route = createFileRoute('/app/calendar')({
@@ -28,59 +36,6 @@ const MONTH_NAMES = [
 ]
 const DAY_HEADERS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
-const STRESS_TAGS = [
-  'exams',
-  'relationships',
-  'family',
-  'money',
-  'loneliness',
-  'health',
-  'work',
-  'other',
-]
-
-const CHECKIN_QUESTIONS = [
-  {
-    id: 'ate',
-    q: 'did you eat today?',
-    options: ['nothing', 'snacked only', 'at least 2 meals'],
-  },
-  {
-    id: 'energy',
-    q: 'how is your energy right now?',
-    options: ['stuck in bed', 'getting by', 'normal', 'feeling good'],
-  },
-  {
-    id: 'sleep',
-    q: 'how did you sleep last night?',
-    options: ['very poor (under 4hrs)', 'okay (4–6hrs)', 'good (7hrs+)'],
-  },
-  {
-    id: 'social',
-    q: 'did you connect with anyone today?',
-    options: ['no contact', 'brief interaction', 'had a real conversation'],
-  },
-  {
-    id: 'focus',
-    q: 'could you focus on anything today?',
-    options: ['completely blank', 'some focus', 'fully focused'],
-  },
-  {
-    id: 'overall',
-    q: 'how would you describe today overall?',
-    options: ['very hard', 'hard', 'okay', 'good', 'really good'],
-  },
-]
-
-const VIEW_CHECKIN_QUESTIONS = [
-  { key: 'ate', q: 'did you eat today?' },
-  { key: 'energy', q: 'how is your energy?' },
-  { key: 'sleep', q: 'how did you sleep?' },
-  { key: 'social', q: 'did you connect with anyone?' },
-  { key: 'focus', q: 'could you focus today?' },
-  { key: 'overall', q: 'how would you describe today?' },
-]
-
 type SheetState =
   | { mode: 'view'; entry: DayEntry }
   | { mode: 'input'; date: string; existing: DayEntry | null }
@@ -88,10 +43,46 @@ type SheetState =
 
 type TimeRange = '7d' | '30d' | '3m'
 
+function scoreFromCheckIn(
+  checkIn: DayEntry['checkIn'],
+  stressTags: string[],
+): number {
+  let score = 64
+
+  if (checkIn.ate === 'nothing') score -= 10
+  if (checkIn.ate === 'at least 2 meals') score += 5
+  if (checkIn.energy === 'stuck in bed') score -= 14
+  if (checkIn.energy === 'feeling good') score += 8
+  if (checkIn.sleep === 'very poor (under 4hrs)') score -= 12
+  if (checkIn.sleep === 'good (7hrs+)') score += 7
+  if (checkIn.social === 'no contact') score -= 7
+  if (checkIn.social === 'had a real conversation') score += 6
+  if (checkIn.focus === 'completely blank') score -= 9
+  if (checkIn.focus === 'fully focused') score += 7
+  if (checkIn.overall === 'very hard') score -= 22
+  if (checkIn.overall === 'hard') score -= 10
+  if (checkIn.overall === 'good') score += 8
+  if (checkIn.overall === 'really good') score += 16
+  score -= Math.min(stressTags.length, 4) * 3
+
+  return Math.min(95, Math.max(5, Math.round(score)))
+}
+
+function summaryFromManualCheckIn(
+  checkIn: DayEntry['checkIn'],
+  stressTags: string[],
+) {
+  const stress = stressTags.length
+    ? ` main stress sources: ${stressTags.join(', ')}.`
+    : ''
+  return `manual check-in saved. today felt ${checkIn.overall}; energy was ${checkIn.energy}.${stress}`
+}
+
 function CalendarPage() {
   const today = new Date()
   const todayStr = today.toISOString().slice(0, 10)
   const { open } = useSearch({ from: '/app/calendar' })
+  const entries = useJournalEntries()
 
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
@@ -101,10 +92,10 @@ function CalendarPage() {
 
   useEffect(() => {
     if (open) {
-      const existing = getEntryByDate(open) ?? null
+      const existing = getEntryByDateFromEntries(entries, open) ?? null
       setSheet({ mode: 'input', date: open, existing })
     }
-  }, [open])
+  }, [entries, open])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -125,7 +116,7 @@ function CalendarPage() {
     else if (timeRange === '30d') cutoff.setDate(now.getDate() - 30)
     else cutoff.setMonth(now.getMonth() - 3)
     const cutoffStr = cutoff.toISOString().slice(0, 10)
-    const data = MEI_DATA.filter((e) => e.date >= cutoffStr).sort((a, b) =>
+    const data = entries.filter((e) => e.date >= cutoffStr).sort((a, b) =>
       a.date.localeCompare(b.date),
     )
 
@@ -228,7 +219,7 @@ function CalendarPage() {
 
     animId = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(animId)
-  }, [timeRange])
+  }, [entries, timeRange])
 
   function prevMonth() {
     if (viewMonth === 0) {
@@ -247,7 +238,7 @@ function CalendarPage() {
   function handleDayClick(day: number) {
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     const isToday = dateStr === todayStr
-    const entry = getEntryByDate(dateStr)
+    const entry = getEntryByDateFromEntries(entries, dateStr)
     if (isToday) {
       setSheet({ mode: 'input', date: dateStr, existing: entry ?? null })
     } else if (entry) {
@@ -263,7 +254,7 @@ function CalendarPage() {
 
   function getCellProps(day: number) {
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    const entry = getEntryByDate(dateStr)
+    const entry = getEntryByDateFromEntries(entries, dateStr)
     const isToday = dateStr === todayStr
     const isFuture = dateStr > todayStr
     if (entry) {
@@ -523,6 +514,12 @@ function DayDetailSheet({
             voice journal
           </span>
           <div className="voice-summary">{entry.voiceSummary}</div>
+          {entry.voiceTranscript ? (
+            <details className="voice-transcript-detail">
+              <summary>transcript</summary>
+              <p>{entry.voiceTranscript}</p>
+            </details>
+          ) : null}
         </div>
 
         <div>
@@ -603,6 +600,28 @@ function CheckInSheet({
   const allAnswered = CHECKIN_QUESTIONS.every((q) => answers[q.id])
 
   function handleSave() {
+    const checkIn: DayEntry['checkIn'] = {
+      ate: answers.ate ?? existing?.checkIn.ate ?? 'snacked only',
+      energy: answers.energy ?? existing?.checkIn.energy ?? 'getting by',
+      sleep: answers.sleep ?? existing?.checkIn.sleep ?? 'okay (4-6hrs)',
+      social: answers.social ?? existing?.checkIn.social ?? 'brief interaction',
+      focus: answers.focus ?? existing?.checkIn.focus ?? 'some focus',
+      overall: answers.overall ?? existing?.checkIn.overall ?? 'okay',
+    }
+    const score = scoreFromCheckIn(checkIn, selectedStress)
+
+    saveJournalEntry({
+      checkIn,
+      date,
+      score,
+      source: existing?.source ?? 'manual',
+      stressTags: selectedStress,
+      tier: scoreToTier(score),
+      voiceSummary:
+        existing?.voiceSummary ?? summaryFromManualCheckIn(checkIn, selectedStress),
+      voiceTranscript: existing?.voiceTranscript,
+    })
+
     setSubmitted(true)
     setTimeout(() => onClose(), 800)
   }

@@ -9,7 +9,11 @@ function TodayRedirect() {
   const navigate = useNavigate()
   const todayStr = new Date().toISOString().slice(0, 10)
   useEffect(() => {
-    navigate({ to: '/calendar', search: { open: todayStr }, replace: true })
+    navigate({
+      to: '/app/calendar',
+      search: { open: todayStr },
+      replace: true,
+    })
   }, [navigate, todayStr])
 
   return null
