@@ -30,6 +30,7 @@ const deepgramDictationUrl = () => {
   const url = new URL(DEEPGRAM_STREAM_URL)
   url.search = new URLSearchParams({
     model: 'nova-3',
+    language: 'multi',
     punctuate: 'true',
     dictation: 'true',
     smart_format: 'true',
