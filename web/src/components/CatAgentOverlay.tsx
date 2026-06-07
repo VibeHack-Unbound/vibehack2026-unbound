@@ -1,9 +1,13 @@
-import { type CSSProperties, useEffect, useMemo, useState } from 'react'
+import { useCallback, type CSSProperties, useState } from 'react'
 import { CHECKIN_QUESTIONS, STRESS_TAGS } from '../lib/checkIn'
-import { getLatestEntryFromEntries, saveJournalEntry, useJournalEntries } from '../lib/journalStore'
+import {
+  getLatestEntryFromEntries,
+  saveJournalEntry,
+  useJournalEntries,
+} from '../lib/journalStore'
 import { buildVoiceDraft, type VoiceDraft } from '../lib/voiceDraft'
 import { scoreToTier } from '../lib/tierSystem'
-import { formatDuration, useDictationStream } from '../hooks/useDictationStream'
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 
 type Props = {
   onClose: () => void
@@ -11,16 +15,25 @@ type Props = {
 
 type OverlayMode = 'record' | 'review' | 'saved'
 
-const WAVEFORM_BARS = [
-  'low-left',
-  'mid-left',
-  'high-left',
-  'peak-left',
-  'center',
-  'peak-right',
-  'high-right',
-  'mid-right',
-  'low-right',
+type LangCode =
+  | 'en-GB'
+  | 'zh-CN'
+  | 'ko'
+  | 'ar-SA'
+  | 'fr-FR'
+  | 'es-ES'
+  | 'pt-BR'
+  | 'hi-IN'
+
+const LANG_OPTIONS: { code: LangCode; label: string }[] = [
+  { code: 'en-GB', label: 'english' },
+  { code: 'zh-CN', label: '中文' },
+  { code: 'ko', label: '한국어' },
+  { code: 'ar-SA', label: 'عربي' },
+  { code: 'fr-FR', label: 'français' },
+  { code: 'es-ES', label: 'español' },
+  { code: 'pt-BR', label: 'português' },
+  { code: 'hi-IN', label: 'हिन्दी' },
 ]
 
 export function CatAgentOverlay({ onClose }: Props) {
@@ -30,105 +43,55 @@ export function CatAgentOverlay({ onClose }: Props) {
 
   const [mode, setMode] = useState<OverlayMode>('record')
   const [draft, setDraft] = useState<VoiceDraft | null>(null)
-  const [summary, setSummary] = useState('')
   const [transcript, setTranscript] = useState('')
   const [selectedStress, setSelectedStress] = useState<string[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [reviewError, setReviewError] = useState<string | null>(null)
+  const [selectedLang, setSelectedLang] = useState<LangCode>('en-GB')
 
-  const {
-    durationMs,
-    error,
-    isBusy,
-    isMicLive,
-    isTranscriptStreamReady,
-    liveTranscript,
-    prewarmSession,
-    prewarmStatus,
-    readiness,
-    resetSession,
-    rmsValue,
-    startRecording,
-    status,
-    stopRecording,
-    transcript: streamTranscript,
-  } = useDictationStream()
+  const appendTranscript = useCallback((text: string) => {
+    setTranscript((prev) => [prev, text].filter(Boolean).join(' '))
+  }, [])
 
-  const activeTranscript = streamTranscript || liveTranscript
-  const rmsPercent = Math.min(100, Math.round(rmsValue * 500))
-  const isPreparingMic = readiness === 'requesting-mic'
-  const isConnectingStream = readiness === 'mic-live' && status === 'connecting'
-  const isStopping = readiness === 'stopping' || status === 'stopping'
-  const isCheckingVoice = status === 'idle' && prewarmStatus === 'checking'
+  const { isListening, isSupported, error, toggleListening } =
+    useSpeechRecognition({
+      language: selectedLang,
+      onTranscript: appendTranscript,
+    })
+
   const allAnswered = CHECKIN_QUESTIONS.every((q) => answers[q.id])
-  const canSave = Boolean(summary.trim()) && allAnswered && Boolean(draft)
+  const canSave = allAnswered && Boolean(draft)
   const reviewTier = draft ? scoreToTier(draft.score) : latestTier
   const needsSupport = draft?.needsSupport || reviewTier === 5
 
-  const reviewStatus = useMemo(() => {
-    if (error) return error
-    if (isCheckingVoice) return 'checking voice connection'
-    if (readiness === 'requesting-mic') return 'getting your microphone ready'
-    if (readiness === 'mic-live') return 'mic is live - connecting transcript'
-    if (readiness === 'stream-open' && activeTranscript) {
-      return 'recording your check-in'
-    }
-    if (readiness === 'stream-open') return 'listening now - speak normally'
-    if (readiness === 'stopping' || status === 'stopping') {
-      return 'turning voice into a journal draft'
-    }
-    return 'tap to start'
-  }, [activeTranscript, error, isCheckingVoice, readiness, status])
-
-  useEffect(() => {
-    if (mode !== 'record' || status !== 'idle' || prewarmStatus !== 'idle') return
-    void prewarmSession()
-  }, [mode, prewarmSession, prewarmStatus, status])
-
   function resetDraft() {
     setDraft(null)
-    setSummary('')
     setTranscript('')
     setSelectedStress([])
     setAnswers({})
-    setReviewError(null)
-    resetSession()
     setMode('record')
   }
 
-  function loadDraft(nextDraft: VoiceDraft) {
+  function handleStopAndReview() {
+    if (isListening) toggleListening()
+    if (!transcript.trim()) return
+
+    const nextDraft = buildVoiceDraft(transcript)
+    if (!nextDraft.transcript) {
+      resetDraft()
+      return
+    }
+
     setDraft(nextDraft)
-    setSummary(nextDraft.summary)
-    setTranscript(nextDraft.transcript)
     setSelectedStress(nextDraft.stressTags)
     setAnswers(nextDraft.checkIn)
-    setReviewError(null)
     setMode('review')
-  }
-
-  async function handleRecordTap() {
-    if (status === 'idle') {
-      resetDraft()
-      await startRecording()
-      return
-    }
-
-    const result = await stopRecording()
-    if (!result || result.status !== 'completed') return
-
-    const nextDraft = buildVoiceDraft(result.transcript)
-    if (!nextDraft.transcript) {
-      setReviewError("i couldn't catch enough to make a draft. try again.")
-      setMode('record')
-      return
-    }
-
-    loadDraft(nextDraft)
   }
 
   function toggleStress(tag: string) {
     setSelectedStress((current) =>
-      current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag],
+      current.includes(tag)
+        ? current.filter((item) => item !== tag)
+        : [...current, tag],
     )
   }
 
@@ -153,29 +116,26 @@ export function CatAgentOverlay({ onClose }: Props) {
       source: 'voice',
       stressTags: selectedStress,
       tier,
-      voiceSummary: summary.trim(),
+      voiceSummary: transcript.trim(),
       voiceTranscript: transcript.trim(),
     })
 
     setMode('saved')
   }
 
-  function handleClose() {
-    onClose()
-  }
-
   return (
-    <div className="cat-agent-overlay" onClick={handleClose}>
+    <div className="cat-agent-overlay" onClick={onClose}>
       <div className="cat-agent-panel" onClick={(e) => e.stopPropagation()}>
         <button
           className="cat-agent-close"
-          onClick={handleClose}
+          onClick={onClose}
           aria-label="close cat agent"
           type="button"
         >
-          x
+          ✕
         </button>
 
+        {/* Record mode */}
         {mode === 'record' && (
           <>
             <div className="cat-agent-kicker">voice check-in</div>
@@ -183,17 +143,7 @@ export function CatAgentOverlay({ onClose }: Props) {
               tell me what today felt like. one messy minute is enough.
             </div>
 
-            <div
-              className={`cat-agent-img-wrap voice-orbit${isPreparingMic || isCheckingVoice ? ' loading' : ''}${isMicLive ? ' mic-live' : ''}`}
-            >
-              <div
-                className="voice-level-ring"
-                style={
-                  {
-                    '--voice-level': `${Math.max(10, rmsPercent)}%`,
-                  } as CSSProperties
-                }
-              />
+            <div className="cat-agent-img-wrap">
               <img
                 src={`/cats/cat-tier-${latestTier}.webp`}
                 alt="cat agent"
@@ -203,53 +153,64 @@ export function CatAgentOverlay({ onClose }: Props) {
               />
             </div>
 
+            {/* Language selector */}
+            <div className="cat-agent-langs">
+              {LANG_OPTIONS.map((lang) => (
+                <button
+                  key={lang.code}
+                  type="button"
+                  onClick={() => setSelectedLang(lang.code)}
+                  className={`cat-lang-btn${selectedLang === lang.code ? ' active' : ''}`}
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
+
             <div className="cat-agent-mic-wrap">
-              {isMicLive && (
+              {isListening && (
                 <div className="waveform" aria-hidden="true">
-                  {WAVEFORM_BARS.map((bar) => (
-                    <div key={bar} className="waveform-bar" />
+                  {[...Array(9)].map((_, i) => (
+                    <div key={i} className="waveform-bar" />
                   ))}
                 </div>
               )}
               <button
-                className={[
-                  'cat-agent-mic-btn voice-recorder-btn',
-                  isPreparingMic || isCheckingVoice ? 'loading' : '',
-                  isMicLive ? 'recording' : '',
-                  isConnectingStream ? 'connecting-stream' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                onClick={() => void handleRecordTap()}
-                disabled={isCheckingVoice || isPreparingMic || isStopping}
-                aria-label={isBusy ? 'stop recording' : 'start recording'}
+                className={`cat-agent-mic-btn${isListening ? ' recording' : ''}`}
+                onClick={toggleListening}
+                aria-label={isListening ? 'stop recording' : 'start recording'}
                 type="button"
               >
-                <span className="voice-recorder-icon" />
+                {isListening ? '⏹️' : '🎤'}
               </button>
               <span className="cat-agent-status">
-                {reviewStatus} · {formatDuration(durationMs)}
+                {isListening
+                  ? 'recording... tap to stop'
+                  : transcript
+                    ? 'tap to record more'
+                    : isSupported
+                      ? 'tap to start'
+                      : error || 'voice not supported in this browser'}
               </span>
             </div>
 
-            {(activeTranscript || isBusy || reviewError || error) && (
-              <div className="cat-agent-transcript live">
-                {activeTranscript ? (
-                  activeTranscript
-                ) : reviewError || error ? (
-                  <span>{reviewError || error}</span>
-                ) : isPreparingMic ? (
-                  <span className="muted-italic">requesting microphone...</span>
-                ) : !isTranscriptStreamReady ? (
-                  <span className="muted-italic">mic is on. transcript is connecting...</span>
-                ) : (
-                  <span className="muted-italic">listening...</span>
-                )}
-              </div>
+            {transcript && (
+              <div className="cat-agent-transcript">{transcript}</div>
+            )}
+
+            {transcript && !isListening && (
+              <button
+                className="btn-primary"
+                onClick={handleStopAndReview}
+                type="button"
+              >
+                done →
+              </button>
             )}
           </>
         )}
 
+        {/* Review mode */}
         {mode === 'review' && draft && (
           <>
             <div className="cat-agent-kicker">journal draft</div>
@@ -265,7 +226,6 @@ export function CatAgentOverlay({ onClose }: Props) {
                 height={88}
               />
               <div>
-                <span className="voice-score">{draft.score}/100</span>
                 <span className={`voice-tier tier-dot-${reviewTier}`}>
                   {reviewTier === 5 ? 'need support' : 'drafted mood'}
                 </span>
@@ -274,19 +234,10 @@ export function CatAgentOverlay({ onClose }: Props) {
 
             {needsSupport && (
               <div className="voice-support-note">
-                this sounds heavy. if you might hurt yourself or feel unsafe, call samaritans on 116
-                123 or text shout to 85258.
+                this sounds heavy. if you might hurt yourself or feel unsafe,
+                call samaritans on 116 123 or text shout to 85258.
               </div>
             )}
-
-            <label className="voice-field">
-              <span>summary</span>
-              <textarea
-                value={summary}
-                onChange={(event) => setSummary(event.target.value)}
-                rows={4}
-              />
-            </label>
 
             <label className="voice-field">
               <span>transcript</span>
@@ -325,10 +276,7 @@ export function CatAgentOverlay({ onClose }: Props) {
                           key={opt}
                           className={`answer-chip${answers[id] === opt ? ' selected' : ''}`}
                           onClick={() =>
-                            setAnswers((current) => ({
-                              ...current,
-                              [id]: opt,
-                            }))
+                            setAnswers((current) => ({ ...current, [id]: opt }))
                           }
                           type="button"
                         >
@@ -342,14 +290,19 @@ export function CatAgentOverlay({ onClose }: Props) {
             </div>
 
             <div className="voice-review-actions">
-              <button className="btn-primary" onClick={saveDraft} disabled={!canSave} type="button">
+              <button
+                className="btn-primary"
+                onClick={saveDraft}
+                disabled={!canSave}
+                type="button"
+              >
                 save to today
               </button>
               <div className="voice-secondary-actions">
                 <button type="button" onClick={resetDraft}>
                   record again
                 </button>
-                <button type="button" onClick={handleClose}>
+                <button type="button" onClick={onClose}>
                   discard
                 </button>
               </div>
@@ -357,10 +310,13 @@ export function CatAgentOverlay({ onClose }: Props) {
           </>
         )}
 
+        {/* Saved mode */}
         {mode === 'saved' && (
           <>
             <div className="cat-agent-kicker">saved</div>
-            <div className="cat-speech-bubble">today's voice journal is in your calendar.</div>
+            <div className="cat-speech-bubble">
+              today's voice journal is in your calendar.
+            </div>
             <div className="cat-agent-img-wrap">
               <img
                 src={`/cats/cat-tier-${reviewTier}.webp`}
@@ -370,12 +326,8 @@ export function CatAgentOverlay({ onClose }: Props) {
                 height={180}
               />
             </div>
-            <div className="voice-saved-card">
-              <span>{formatDuration(durationMs)}</span>
-              <p>{summary}</p>
-            </div>
             <div className="voice-review-actions">
-              <button className="btn-primary" onClick={handleClose} type="button">
+              <button className="btn-primary" onClick={onClose} type="button">
                 done
               </button>
               <div className="voice-secondary-actions">
