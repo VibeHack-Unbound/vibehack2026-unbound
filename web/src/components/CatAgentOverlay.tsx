@@ -43,7 +43,8 @@ export function CatAgentOverlay({ onClose }: Props) {
     isMicLive,
     isTranscriptStreamReady,
     liveTranscript,
-    preconnectStream,
+    prewarmSession,
+    prewarmStatus,
     readiness,
     resetSession,
     rmsValue,
@@ -51,7 +52,6 @@ export function CatAgentOverlay({ onClose }: Props) {
     status,
     stopRecording,
     transcript: streamTranscript,
-    transcriptStreamStatus,
   } = useDictationStream()
 
   const activeTranscript = streamTranscript || liveTranscript
@@ -59,15 +59,15 @@ export function CatAgentOverlay({ onClose }: Props) {
   const isPreparingMic = readiness === 'requesting-mic'
   const isConnectingStream = readiness === 'mic-live' && status === 'connecting'
   const isStopping = readiness === 'stopping' || status === 'stopping'
-  const isWarmingTranscript =
-    status === 'idle' && transcriptStreamStatus === 'connecting'
+  const isCheckingVoice = status === 'idle' && prewarmStatus === 'checking'
   const allAnswered = CHECKIN_QUESTIONS.every((q) => answers[q.id])
   const canSave = Boolean(summary.trim()) && allAnswered && Boolean(draft)
   const reviewTier = draft ? scoreToTier(draft.score) : latestTier
   const needsSupport = draft?.needsSupport || reviewTier === 5
 
   const reviewStatus = useMemo(() => {
-    if (isWarmingTranscript) return 'warming up voice stream'
+    if (error) return error
+    if (isCheckingVoice) return 'checking voice connection'
     if (readiness === 'requesting-mic') return 'getting your microphone ready'
     if (readiness === 'mic-live') return 'mic is live - connecting transcript'
     if (readiness === 'stream-open' && activeTranscript) {
@@ -77,22 +77,13 @@ export function CatAgentOverlay({ onClose }: Props) {
     if (readiness === 'stopping' || status === 'stopping') {
       return 'turning voice into a journal draft'
     }
-    if (error) return error
-    if (transcriptStreamStatus === 'ready') return 'tap to start - stream ready'
     return 'tap to start'
-  }, [
-    activeTranscript,
-    error,
-    isWarmingTranscript,
-    readiness,
-    status,
-    transcriptStreamStatus,
-  ])
+  }, [activeTranscript, error, isCheckingVoice, readiness, status])
 
   useEffect(() => {
-    if (mode !== 'record' || status !== 'idle') return
-    void preconnectStream()
-  }, [mode, preconnectStream, status])
+    if (mode !== 'record' || status !== 'idle' || prewarmStatus !== 'idle') return
+    void prewarmSession()
+  }, [mode, prewarmSession, prewarmStatus, status])
 
   function resetDraft() {
     setDraft(null)
@@ -137,9 +128,7 @@ export function CatAgentOverlay({ onClose }: Props) {
 
   function toggleStress(tag: string) {
     setSelectedStress((current) =>
-      current.includes(tag)
-        ? current.filter((item) => item !== tag)
-        : [...current, tag],
+      current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag],
     )
   }
 
@@ -195,7 +184,7 @@ export function CatAgentOverlay({ onClose }: Props) {
             </div>
 
             <div
-              className={`cat-agent-img-wrap voice-orbit${isPreparingMic || isWarmingTranscript ? ' loading' : ''}${isMicLive ? ' mic-live' : ''}`}
+              className={`cat-agent-img-wrap voice-orbit${isPreparingMic || isCheckingVoice ? ' loading' : ''}${isMicLive ? ' mic-live' : ''}`}
             >
               <div
                 className="voice-level-ring"
@@ -225,14 +214,14 @@ export function CatAgentOverlay({ onClose }: Props) {
               <button
                 className={[
                   'cat-agent-mic-btn voice-recorder-btn',
-                  isPreparingMic ? 'loading' : '',
+                  isPreparingMic || isCheckingVoice ? 'loading' : '',
                   isMicLive ? 'recording' : '',
                   isConnectingStream ? 'connecting-stream' : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
                 onClick={() => void handleRecordTap()}
-                disabled={isPreparingMic || isStopping}
+                disabled={isCheckingVoice || isPreparingMic || isStopping}
                 aria-label={isBusy ? 'stop recording' : 'start recording'}
                 type="button"
               >
@@ -252,9 +241,7 @@ export function CatAgentOverlay({ onClose }: Props) {
                 ) : isPreparingMic ? (
                   <span className="muted-italic">requesting microphone...</span>
                 ) : !isTranscriptStreamReady ? (
-                  <span className="muted-italic">
-                    mic is on. transcript is connecting...
-                  </span>
+                  <span className="muted-italic">mic is on. transcript is connecting...</span>
                 ) : (
                   <span className="muted-italic">listening...</span>
                 )}
@@ -287,8 +274,8 @@ export function CatAgentOverlay({ onClose }: Props) {
 
             {needsSupport && (
               <div className="voice-support-note">
-                this sounds heavy. if you might hurt yourself or feel unsafe,
-                call samaritans on 116 123 or text shout to 85258.
+                this sounds heavy. if you might hurt yourself or feel unsafe, call samaritans on 116
+                123 or text shout to 85258.
               </div>
             )}
 
@@ -355,12 +342,7 @@ export function CatAgentOverlay({ onClose }: Props) {
             </div>
 
             <div className="voice-review-actions">
-              <button
-                className="btn-primary"
-                onClick={saveDraft}
-                disabled={!canSave}
-                type="button"
-              >
+              <button className="btn-primary" onClick={saveDraft} disabled={!canSave} type="button">
                 save to today
               </button>
               <div className="voice-secondary-actions">
@@ -378,9 +360,7 @@ export function CatAgentOverlay({ onClose }: Props) {
         {mode === 'saved' && (
           <>
             <div className="cat-agent-kicker">saved</div>
-            <div className="cat-speech-bubble">
-              today's voice journal is in your calendar.
-            </div>
+            <div className="cat-speech-bubble">today's voice journal is in your calendar.</div>
             <div className="cat-agent-img-wrap">
               <img
                 src={`/cats/cat-tier-${reviewTier}.webp`}

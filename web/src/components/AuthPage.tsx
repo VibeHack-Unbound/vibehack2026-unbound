@@ -1,7 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useState, type FormEvent } from 'react'
 
-import { CatIllustration } from '#/components/CatIllustration'
 import { authClient, safeRedirectPath } from '#/lib/auth'
 
 type AuthMode = 'login' | 'register'
@@ -11,10 +10,7 @@ type AuthPageProps = {
   redirect?: string
 }
 
-function authErrorMessage(
-  error: { message?: string } | null | undefined,
-  fallback: string,
-) {
+function authErrorMessage(error: { message?: string } | null | undefined, fallback: string) {
   return error?.message ?? fallback
 }
 
@@ -26,18 +22,17 @@ export function AuthPage({ mode, redirect }: AuthPageProps) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const title = isRegister ? 'Create your account' : 'Log in to Unbound'
+  const title = isRegister ? 'start unbound' : 'welcome back'
   const body = isRegister
-    ? 'Start a private workspace for your team notes and submissions.'
-    : 'Open your private workspace and keep momentum across sessions.'
-  const submitLabel = isRegister ? 'Create account' : 'Log in'
-  const alternateHref = isRegister
-    ? '/login?redirect=/app'
-    : '/register?redirect=/app'
-  const alternateText = isRegister
-    ? 'Already have an account?'
-    : 'Need an account?'
-  const alternateAction = isRegister ? 'Log in' : 'Register'
+    ? 'create an account before your first check-in.'
+    : "log in to do today's check-in."
+  const submitLabel = isRegister ? 'create account' : 'log in'
+  const redirectTarget = redirect?.startsWith('/') && !redirect.startsWith('//') ? redirect : '/app'
+  const alternatePath = isRegister ? '/login' : '/register'
+  const alternateHref = `${alternatePath}?redirect=${encodeURIComponent(redirectTarget)}`
+  const alternateText = isRegister ? 'already have an account?' : 'need an account?'
+  const alternateAction = isRegister ? 'log in' : 'register'
+  const catTier = isRegister ? 1 : 2
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -62,10 +57,7 @@ export function AuthPage({ mode, redirect }: AuthPageProps) {
 
       if (result.error) {
         setError(
-          authErrorMessage(
-            result.error,
-            isRegister ? 'Could not register' : 'Could not log in',
-          ),
+          authErrorMessage(result.error, isRegister ? 'Could not register' : 'Could not log in'),
         )
         return
       }
@@ -87,109 +79,84 @@ export function AuthPage({ mode, redirect }: AuthPageProps) {
   return (
     <main className="auth-page">
       <section className="auth-shell">
-        <div className="auth-story">
-          <div className="mini-brand left auth-brand">
-            <span className="brand-cat calm">●</span>
-            <strong>Unbound</strong>
-          </div>
+        <header className="auth-header">
+          <Link to="/login" search={{ redirect: redirectTarget }} className="auth-header-title">
+            unbound
+          </Link>
+        </header>
 
+        <div className="auth-screen page-enter">
           <div className="auth-copy">
-            <p className="auth-kicker">
-              {isRegister ? 'Start private' : 'Welcome back'}
-            </p>
             <h1>{title}</h1>
             <p>{body}</p>
           </div>
 
-          <div className="auth-illustration" aria-hidden="true">
-            <CatIllustration tier={isRegister ? 1 : 2} size={180} />
-          </div>
-
-          <div className="auth-points">
-            <AuthPoint
-              title="D1-backed sessions"
-              body="Accounts, sessions, and reset tokens live in the API Worker database."
-            />
-            <AuthPoint
-              title="Private app data"
-              body="Submissions are scoped to the authenticated user instead of a shared public list."
-            />
-            <AuthPoint
-              title="Cloudflare-ready"
-              body="The web Worker stays HTTP-only; secrets and D1 access remain in the API Worker."
+          <div className="auth-cat-wrap" aria-hidden="true">
+            <img
+              src={`/cats/cat-tier-${catTier}.webp`}
+              alt=""
+              width={176}
+              height={176}
+              className={`auth-cat-img cat-idle-${catTier}`}
             />
           </div>
-        </div>
 
-        <form onSubmit={handleSubmit} className="auth-card">
-          <div className="auth-card-header">
-            <h2>{submitLabel}</h2>
-            <p>
-              {alternateText} <a href={alternateHref}>{alternateAction}</a>
-            </p>
-          </div>
+          <form onSubmit={handleSubmit} className="auth-card">
+            <div className="auth-card-header">
+              <h2>{submitLabel}</h2>
+              <p>
+                {alternateText} <a href={alternateHref}>{alternateAction}</a>
+              </p>
+            </div>
 
-          {error ? <div className="auth-error">{error}</div> : null}
+            {error ? <div className="auth-error">{error}</div> : null}
 
-          <div className="auth-field-list">
-            {isRegister ? (
+            <div className="auth-field-list">
+              {isRegister ? (
+                <AuthField
+                  label="name"
+                  value={name}
+                  autoComplete="name"
+                  onChange={setName}
+                  required
+                />
+              ) : null}
               <AuthField
-                label="Name"
-                value={name}
-                autoComplete="name"
-                onChange={setName}
+                label="email"
+                value={email}
+                type="email"
+                autoComplete="email"
+                onChange={setEmail}
                 required
               />
+              <AuthField
+                label="password"
+                value={password}
+                type="password"
+                minLength={8}
+                autoComplete={isRegister ? 'new-password' : 'current-password'}
+                onChange={setPassword}
+                required
+              />
+            </div>
+
+            {!isRegister ? (
+              <Link to="/forgot-password" className="auth-secondary-link">
+                forgot password?
+              </Link>
             ) : null}
-            <AuthField
-              label="Email"
-              value={email}
-              type="email"
-              autoComplete="email"
-              onChange={setEmail}
-              required
-            />
-            <AuthField
-              label="Password"
-              value={password}
-              type="password"
-              minLength={8}
-              autoComplete={isRegister ? 'new-password' : 'current-password'}
-              onChange={setPassword}
-              required
-            />
-          </div>
 
-          {!isRegister ? (
-            <Link to="/forgot-password" className="auth-secondary-link">
-              Forgot password?
-            </Link>
-          ) : null}
-
-          <button
-            type="submit"
-            disabled={
-              loading ||
-              !email.trim() ||
-              !password ||
-              (isRegister && !name.trim())
-            }
-            className="auth-submit"
-          >
-            {loading ? 'Working...' : submitLabel}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading || !email.trim() || !password || (isRegister && !name.trim())}
+              className="btn-primary auth-submit"
+            >
+              {loading ? 'working...' : submitLabel}
+            </button>
+          </form>
+        </div>
       </section>
     </main>
-  )
-}
-
-function AuthPoint({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="auth-point">
-      <h3>{title}</h3>
-      <p>{body}</p>
-    </div>
   )
 }
 
