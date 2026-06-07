@@ -900,6 +900,94 @@ textarea:focus-visible {
   color: var(--muted);
 }
 
+/* ── Settings Page ──────────────────────────────────────────────────── */
+.settings-screen {
+  gap: 16px;
+}
+
+.settings-account-card {
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  display: grid;
+  overflow: hidden;
+}
+
+.settings-row {
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+}
+
+.settings-row + .settings-row {
+  border-top: 1.5px solid var(--border);
+}
+
+.settings-label {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+.settings-value {
+  color: var(--fg);
+  font-size: 0.92rem;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.settings-logout-btn {
+  width: 100%;
+  min-height: 48px;
+  border: 1.5px solid rgb(184 92 92 / 42%);
+  border-radius: 999px;
+  background: rgb(184 92 92 / 10%);
+  color: #8b4545;
+  font-size: 0.9rem;
+  font-weight: 800;
+  transition:
+    background 160ms,
+    opacity 160ms,
+    transform 160ms;
+}
+
+.settings-logout-btn:hover {
+  background: rgb(184 92 92 / 16%);
+}
+
+.settings-logout-btn:active {
+  transform: scale(0.98);
+}
+
+.settings-logout-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+  transform: none;
+}
+
+.settings-message,
+.settings-loading {
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.settings-loading {
+  background: var(--input);
+  color: var(--muted);
+}
+
+.settings-error {
+  border: 1.5px solid rgb(242 184 198 / 80%);
+  background: rgb(242 184 198 / 20%);
+  color: var(--fg);
+}
+
 /* ── Cat Agent Overlay ──────────────────────────────────────────────── */
 .cat-agent-overlay {
   position: fixed;
