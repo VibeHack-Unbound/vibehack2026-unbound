@@ -6,7 +6,13 @@ export const emotionOptions = [
   { icon: 'Hopeful', label: 'Hopeful', tone: '#94b77f' },
 ]
 
-export const checklistItems = ['Meal', 'Outside', 'Movement', 'Social contact', 'Stress trigger']
+export const checklistItems = [
+  'Meal',
+  'Outside',
+  'Movement',
+  'Social contact',
+  'Stress trigger',
+]
 
 export const weeklyMood = [
   { day: 'Mon', mood: 5, label: 'Low' },

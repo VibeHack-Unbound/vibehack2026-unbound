@@ -39,7 +39,8 @@ export const TIERS: Record<Tier, TierInfo> = {
     label: 'watch',
     colour: '#F2B8C6',
     catMood: 'curled',
-    recommendation: 'things feel heavy right now. reaching out to someone you trust can help.',
+    recommendation:
+      'things feel heavy right now. reaching out to someone you trust can help.',
   },
   5: {
     tier: 5,

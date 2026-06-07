@@ -3,14 +3,14 @@ import type { Tier } from './tierSystem'
 // ── Cat image URLs (uploaded to Manus CDN) ────────────────────────────────
 // Cat avatars provided by the design team, representing each mood tier.
 export const CAT_IMAGES = {
-  tier1: '/manus-storage/cat4_283e8e9c.png',  // superhero cat flying — coping well
-  tier2: '/manus-storage/cat2_214e4198.png',  // dancing with scarf — coping ok
-  tier3: '/manus-storage/cat7_7e3387d4.png',  // hanging from hanger — mild watch
-  tier4: '/manus-storage/cat6_54d6f974.png',  // curled up loaf — watch
-  tier5: '/manus-storage/cat9_064d2a42.png',  // overwhelmed, wide eyes — need support
-  logo: '/manus-storage/logo_4a50b44a.png',   // unbound logo for nav
+  tier1: '/manus-storage/cat4_283e8e9c.png', // superhero cat flying — coping well
+  tier2: '/manus-storage/cat2_214e4198.png', // dancing with scarf — coping ok
+  tier3: '/manus-storage/cat7_7e3387d4.png', // hanging from hanger — mild watch
+  tier4: '/manus-storage/cat6_54d6f974.png', // curled up loaf — watch
+  tier5: '/manus-storage/cat9_064d2a42.png', // overwhelmed, wide eyes — need support
+  logo: '/manus-storage/logo_4a50b44a.png', // unbound logo for nav
   listening: '/manus-storage/cat1_5212e7d7.png', // sitting cat for voice input
-  happy: '/manus-storage/cat3_e03d098a.png',  // friendly cat for support page
+  happy: '/manus-storage/cat3_e03d098a.png', // friendly cat for support page
 } as const
 
 export function catImageForTier(tier: Tier): string {

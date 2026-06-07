@@ -52,7 +52,8 @@ export async function getFreshAuthSession(): Promise<CurrentAuth | null> {
   })
 
   if (response.status === 401 || response.status === 403) return null
-  if (!response.ok) throw new Error(`Failed to fetch current session (${response.status})`)
+  if (!response.ok)
+    throw new Error(`Failed to fetch current session (${response.status})`)
 
   const data = (await response.json()) as Partial<CurrentAuth>
   if (!data.user || !data.session) return null
