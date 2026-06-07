@@ -51,7 +51,11 @@ function ResetPasswordPage() {
 
       setSuccess(true)
     } catch (resetError) {
-      setError(resetError instanceof Error ? resetError.message : 'Could not reset password')
+      setError(
+        resetError instanceof Error
+          ? resetError.message
+          : 'Could not reset password',
+      )
     } finally {
       setLoading(false)
     }
@@ -62,9 +66,12 @@ function ResetPasswordPage() {
       <section className="mx-auto max-w-md rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
         {success ? (
           <div className="text-center">
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">Password reset</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">
+              Password reset
+            </h1>
             <p className="mt-3 text-sm leading-6 text-zinc-600">
-              Your password has been updated. You can log in with the new password now.
+              Your password has been updated. You can log in with the new
+              password now.
             </p>
             <Link
               to="/login"
@@ -89,7 +96,11 @@ function ResetPasswordPage() {
             ) : null}
 
             <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
-              <PasswordField label="New password" value={password} onChange={setPassword} />
+              <PasswordField
+                label="New password"
+                value={password}
+                onChange={setPassword}
+              />
               <PasswordField
                 label="Confirm password"
                 value={confirmPassword}

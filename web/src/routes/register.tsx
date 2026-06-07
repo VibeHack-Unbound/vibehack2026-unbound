@@ -15,7 +15,8 @@ export const Route = createFileRoute('/register')({
     const auth = await getServerSession()
     if (!auth) return
 
-    const target = typeof search.redirect === 'string' ? search.redirect : undefined
+    const target =
+      typeof search.redirect === 'string' ? search.redirect : undefined
     if (target?.startsWith('/') && !target.startsWith('//')) {
       throw redirect({ to: target })
     }

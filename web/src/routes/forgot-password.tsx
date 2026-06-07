@@ -31,7 +31,11 @@ function ForgotPasswordPage() {
 
       setSent(true)
     } catch (resetError) {
-      setError(resetError instanceof Error ? resetError.message : 'Could not send password reset')
+      setError(
+        resetError instanceof Error
+          ? resetError.message
+          : 'Could not send password reset',
+      )
     } finally {
       setLoading(false)
     }
@@ -46,8 +50,8 @@ function ForgotPasswordPage() {
               Check your email
             </h1>
             <p className="mt-3 text-sm leading-6 text-zinc-600">
-              If an account exists for {email}, a reset link was created. In local development, the
-              API Worker logs that link to the console.
+              If an account exists for {email}, a reset link was created. In
+              local development, the API Worker logs that link to the console.
             </p>
             <Link
               to="/login"
@@ -58,7 +62,9 @@ function ForgotPasswordPage() {
           </div>
         ) : (
           <>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">Reset password</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">
+              Reset password
+            </h1>
             <p className="mt-2 text-sm leading-6 text-zinc-600">
               Enter your email and Better Auth will create a reset token.
             </p>

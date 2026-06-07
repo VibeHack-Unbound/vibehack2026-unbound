@@ -62,11 +62,14 @@ const initialStreamStats: StreamStats = {
   lastMessageType: '-',
 }
 
-const apiOrigin = () => import.meta.env.VITE_HTTP_API_URL ?? 'http://localhost:8787'
+const apiOrigin = () =>
+  import.meta.env.VITE_HTTP_API_URL ?? 'http://localhost:8787'
 
 const isLocalApiOrigin = () => {
   const hostname = new URL(apiOrigin()).hostname
-  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
+  return (
+    hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
+  )
 }
 
 const dictationSocketUrl = () => {
@@ -163,7 +166,9 @@ const blobToDataUrl = (blob: Blob) =>
   })
 
 const chooseRecordingMimeType = () =>
-  recordingMimeTypes.find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) ?? ''
+  recordingMimeTypes.find((mimeType) =>
+    MediaRecorder.isTypeSupported(mimeType),
+  ) ?? ''
 
 const appendTranscript = (current: string, next: string) => {
   const trimmed = next.trim()
@@ -190,7 +195,10 @@ const waitForSocketClose = (socket: WebSocket, timeoutMs: number) =>
 
     socket.addEventListener('close', handleClose, { once: true })
     timeoutId = window.setTimeout(() => {
-      if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+      if (
+        socket.readyState === WebSocket.OPEN ||
+        socket.readyState === WebSocket.CONNECTING
+      ) {
         socket.close(1000, 'Done')
       }
       cleanup()
@@ -203,8 +211,11 @@ function DevPage() {
   const [recorderState, setRecorderState] = useState<RecorderState>('inactive')
   const [rmsValue, setRmsValue] = useState(0)
   const [durationMs, setDurationMs] = useState(0)
-  const [streamStats, setStreamStats] = useState<StreamStats>(initialStreamStats)
-  const [audioInputDevices, setAudioInputDevices] = useState<AudioInputDevice[]>([])
+  const [streamStats, setStreamStats] =
+    useState<StreamStats>(initialStreamStats)
+  const [audioInputDevices, setAudioInputDevices] = useState<
+    AudioInputDevice[]
+  >([])
   const [selectedDeviceId, setSelectedDeviceId] = useState('default')
   const [deviceError, setDeviceError] = useState<string | null>(null)
   const [liveTranscript, setLiveTranscript] = useState('')
@@ -232,13 +243,18 @@ function DevPage() {
   const isBusy = status !== 'idle'
   const rmsPercent = Math.min(100, Math.round(rmsValue * 500))
   const audioInputOptions = useMemo(() => {
-    const selectableDevices = audioInputDevices.filter((device) => device.deviceId)
+    const selectableDevices = audioInputDevices.filter(
+      (device) => device.deviceId,
+    )
 
     if (selectableDevices.some((device) => device.deviceId === 'default')) {
       return selectableDevices
     }
 
-    return [{ deviceId: 'default', groupId: '', label: '' }, ...selectableDevices]
+    return [
+      { deviceId: 'default', groupId: '', label: '' },
+      ...selectableDevices,
+    ]
   }, [audioInputDevices])
   const erroredEntries = useMemo(
     () => entries.filter((entry) => entry.status === 'error').length,
@@ -261,11 +277,15 @@ function DevPage() {
       setDeviceError(null)
       setSelectedDeviceId((current) => {
         if (current === 'default') return current
-        return audioInputs.some((device) => device.deviceId === current) ? current : 'default'
+        return audioInputs.some((device) => device.deviceId === current)
+          ? current
+          : 'default'
       })
     } catch (deviceReadError) {
       const message =
-        deviceReadError instanceof Error ? deviceReadError.message : 'Could not read input devices'
+        deviceReadError instanceof Error
+          ? deviceReadError.message
+          : 'Could not read input devices'
       setDeviceError(message)
     }
   }, [])
@@ -291,7 +311,10 @@ function DevPage() {
 
     return () => {
       window.clearTimeout(refreshTimer)
-      mediaDevices?.removeEventListener('devicechange', refreshAudioInputDevices)
+      mediaDevices?.removeEventListener(
+        'devicechange',
+        refreshAudioInputDevices,
+      )
     }
   }, [refreshAudioInputDevices])
 
@@ -471,7 +494,10 @@ function DevPage() {
     }
   }
 
-  const finishSession = async (result: 'completed' | 'error', message?: string) => {
+  const finishSession = async (
+    result: 'completed' | 'error',
+    message?: string,
+  ) => {
     if (finishingRef.current) return
     finishingRef.current = true
     setStatus('stopping')
@@ -562,7 +588,10 @@ function DevPage() {
       void refreshAudioInputDevices()
       startAudioMeter(stream)
 
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+      const recorder = new MediaRecorder(
+        stream,
+        mimeType ? { mimeType } : undefined,
+      )
       mediaRecorderRef.current = recorder
 
       recorder.addEventListener('dataavailable', (event) => {
@@ -632,12 +661,16 @@ function DevPage() {
           ...current,
           emptyResults: current.emptyResults + (hasTranscript ? 0 : 1),
           resultMessages: current.resultMessages + 1,
-          transcriptMessages: current.transcriptMessages + (hasTranscript ? 1 : 0),
+          transcriptMessages:
+            current.transcriptMessages + (hasTranscript ? 1 : 0),
         }))
         if (!hasTranscript) return
 
         if (message.is_final || message.speech_final) {
-          finalTranscriptRef.current = appendTranscript(finalTranscriptRef.current, transcript)
+          finalTranscriptRef.current = appendTranscript(
+            finalTranscriptRef.current,
+            transcript,
+          )
           interimTranscriptRef.current = ''
           setLiveTranscript(finalTranscriptRef.current)
           setInterimTranscript('')
@@ -664,9 +697,15 @@ function DevPage() {
         }
       })
     } catch (startError) {
-      const message = startError instanceof Error ? startError.message : 'Could not start dictation'
+      const message =
+        startError instanceof Error
+          ? startError.message
+          : 'Could not start dictation'
       setError(message)
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== 'inactive'
+      ) {
         void finishSession('error', message)
         return
       }
@@ -694,8 +733,12 @@ function DevPage() {
     <main className="min-h-[calc(100vh-73px)] bg-slate-50">
       <section className="mx-auto grid max-w-6xl gap-6 px-6 py-10 lg:grid-cols-[380px_1fr]">
         <aside className="rounded-xl border border-slate-200 bg-white p-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Dev</p>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">Dictation</h1>
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+            Dev
+          </p>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+            Dictation
+          </h1>
 
           <div className="mt-6 grid grid-cols-2 gap-3">
             <Metric label="Saved" value={String(entries.length)} />
@@ -721,19 +764,24 @@ function DevPage() {
             </div>
             <div className="mt-3 flex items-center justify-between gap-4 text-sm">
               <span className="font-medium text-slate-500">Recorder state</span>
-              <span className="font-semibold text-slate-800">{recorderState}</span>
+              <span className="font-semibold text-slate-800">
+                {recorderState}
+              </span>
             </div>
             <div className="mt-2 flex items-center justify-between gap-4 text-sm">
               <span className="font-medium text-slate-500">Audio sent</span>
               <span className="font-semibold text-slate-800">
-                {streamStats.chunksSent} chunks / {formatBytes(streamStats.bytesSent)}
+                {streamStats.chunksSent} chunks /{' '}
+                {formatBytes(streamStats.bytesSent)}
               </span>
             </div>
             <div className="mt-2 flex items-center justify-between gap-4 text-sm">
               <span className="font-medium text-slate-500">Results</span>
               <span className="font-semibold text-slate-800">
                 {streamStats.transcriptMessages}/{streamStats.resultMessages}
-                {streamStats.emptyResults ? ` (${streamStats.emptyResults} empty)` : ''}
+                {streamStats.emptyResults
+                  ? ` (${streamStats.emptyResults} empty)`
+                  : ''}
               </span>
             </div>
             <div className="mt-2 flex items-center justify-between gap-4 text-sm">
@@ -763,7 +811,9 @@ function DevPage() {
             </select>
           </label>
 
-          {deviceError ? <p className="mt-2 text-sm text-amber-700">{deviceError}</p> : null}
+          {deviceError ? (
+            <p className="mt-2 text-sm text-amber-700">{deviceError}</p>
+          ) : null}
 
           {error ? (
             <div className="mt-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -809,7 +859,9 @@ function DevPage() {
                 <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Live
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold text-slate-950">Current session</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+                  Current session
+                </h2>
               </div>
               <span className="rounded-md border border-slate-200 px-3 py-1 text-sm font-medium text-slate-600">
                 {status} / {recorderState} / {formatDuration(durationMs)}
@@ -836,7 +888,9 @@ function DevPage() {
                 <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Local
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold text-slate-950">History</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+                  History
+                </h2>
               </div>
               <p className="text-sm text-slate-500">{STORAGE_KEY}</p>
             </div>
@@ -900,7 +954,11 @@ function DevPage() {
                             ? ` · ${formatDuration(entry.recording.durationMs)}`
                             : ''}
                         </p>
-                        <audio controls src={entry.recording.dataUrl} className="w-full" />
+                        <audio
+                          controls
+                          src={entry.recording.dataUrl}
+                          className="w-full"
+                        />
                       </div>
                     ) : null}
                   </article>
@@ -917,8 +975,12 @@ function DevPage() {
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
-      <p className="mt-1 break-words text-lg font-semibold text-slate-950">{value}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 break-words text-lg font-semibold text-slate-950">
+        {value}
+      </p>
     </div>
   )
 }
