@@ -1,4 +1,4 @@
-import { type CSSProperties, useMemo, useState } from 'react'
+import { type CSSProperties, useEffect, useMemo, useState } from 'react'
 import { CHECKIN_QUESTIONS, STRESS_TAGS } from '../lib/checkIn'
 import { getLatestEntryFromEntries, saveJournalEntry, useJournalEntries } from '../lib/journalStore'
 import { buildVoiceDraft, type VoiceDraft } from '../lib/voiceDraft'
@@ -40,29 +40,59 @@ export function CatAgentOverlay({ onClose }: Props) {
     durationMs,
     error,
     isBusy,
+    isMicLive,
+    isTranscriptStreamReady,
     liveTranscript,
+    preconnectStream,
+    readiness,
     resetSession,
     rmsValue,
     startRecording,
     status,
     stopRecording,
     transcript: streamTranscript,
+    transcriptStreamStatus,
   } = useDictationStream()
 
   const activeTranscript = streamTranscript || liveTranscript
   const rmsPercent = Math.min(100, Math.round(rmsValue * 500))
+  const isPreparingMic = readiness === 'requesting-mic'
+  const isConnectingStream = readiness === 'mic-live' && status === 'connecting'
+  const isStopping = readiness === 'stopping' || status === 'stopping'
+  const isWarmingTranscript =
+    status === 'idle' && transcriptStreamStatus === 'connecting'
   const allAnswered = CHECKIN_QUESTIONS.every((q) => answers[q.id])
   const canSave = Boolean(summary.trim()) && allAnswered && Boolean(draft)
   const reviewTier = draft ? scoreToTier(draft.score) : latestTier
   const needsSupport = draft?.needsSupport || reviewTier === 5
 
   const reviewStatus = useMemo(() => {
-    if (status === 'connecting') return 'getting the recorder ready'
-    if (status === 'recording') return 'recording your check-in'
-    if (status === 'stopping') return 'turning voice into a journal draft'
+    if (isWarmingTranscript) return 'warming up voice stream'
+    if (readiness === 'requesting-mic') return 'getting your microphone ready'
+    if (readiness === 'mic-live') return 'mic is live - connecting transcript'
+    if (readiness === 'stream-open' && activeTranscript) {
+      return 'recording your check-in'
+    }
+    if (readiness === 'stream-open') return 'listening now - speak normally'
+    if (readiness === 'stopping' || status === 'stopping') {
+      return 'turning voice into a journal draft'
+    }
     if (error) return error
+    if (transcriptStreamStatus === 'ready') return 'tap to start - stream ready'
     return 'tap to start'
-  }, [error, status])
+  }, [
+    activeTranscript,
+    error,
+    isWarmingTranscript,
+    readiness,
+    status,
+    transcriptStreamStatus,
+  ])
+
+  useEffect(() => {
+    if (mode !== 'record' || status !== 'idle') return
+    void preconnectStream()
+  }, [mode, preconnectStream, status])
 
   function resetDraft() {
     setDraft(null)
@@ -164,7 +194,9 @@ export function CatAgentOverlay({ onClose }: Props) {
               tell me what today felt like. one messy minute is enough.
             </div>
 
-            <div className="cat-agent-img-wrap voice-orbit">
+            <div
+              className={`cat-agent-img-wrap voice-orbit${isPreparingMic || isWarmingTranscript ? ' loading' : ''}${isMicLive ? ' mic-live' : ''}`}
+            >
               <div
                 className="voice-level-ring"
                 style={
@@ -183,7 +215,7 @@ export function CatAgentOverlay({ onClose }: Props) {
             </div>
 
             <div className="cat-agent-mic-wrap">
-              {isBusy && (
+              {isMicLive && (
                 <div className="waveform" aria-hidden="true">
                   {WAVEFORM_BARS.map((bar) => (
                     <div key={bar} className="waveform-bar" />
@@ -191,9 +223,16 @@ export function CatAgentOverlay({ onClose }: Props) {
                 </div>
               )}
               <button
-                className={`cat-agent-mic-btn voice-recorder-btn${isBusy ? ' recording' : ''}`}
+                className={[
+                  'cat-agent-mic-btn voice-recorder-btn',
+                  isPreparingMic ? 'loading' : '',
+                  isMicLive ? 'recording' : '',
+                  isConnectingStream ? 'connecting-stream' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 onClick={() => void handleRecordTap()}
-                disabled={status === 'connecting' || status === 'stopping'}
+                disabled={isPreparingMic || isStopping}
                 aria-label={isBusy ? 'stop recording' : 'start recording'}
                 type="button"
               >
@@ -210,6 +249,12 @@ export function CatAgentOverlay({ onClose }: Props) {
                   activeTranscript
                 ) : reviewError || error ? (
                   <span>{reviewError || error}</span>
+                ) : isPreparingMic ? (
+                  <span className="muted-italic">requesting microphone...</span>
+                ) : !isTranscriptStreamReady ? (
+                  <span className="muted-italic">
+                    mic is on. transcript is connecting...
+                  </span>
                 ) : (
                   <span className="muted-italic">listening...</span>
                 )}

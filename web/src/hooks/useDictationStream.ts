@@ -2,6 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 export type DictationStatus = 'idle' | 'connecting' | 'recording' | 'stopping'
 export type RecorderState = 'inactive' | 'recording' | 'paused'
+export type DictationReadiness =
+  | 'idle'
+  | 'requesting-mic'
+  | 'mic-live'
+  | 'stream-open'
+  | 'stopping'
+export type TranscriptStreamStatus = 'idle' | 'connecting' | 'ready'
 
 export type StreamStats = {
   bytesSent: number
@@ -152,6 +159,9 @@ export function useDictationStream({
   const [liveTranscript, setLiveTranscript] = useState('')
   const [interimTranscript, setInterimTranscript] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [readiness, setReadiness] = useState<DictationReadiness>('idle')
+  const [transcriptStreamStatus, setTranscriptStreamStatus] =
+    useState<TranscriptStreamStatus>('idle')
 
   const socketRef = useRef<WebSocket | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -171,8 +181,12 @@ export function useDictationStream({
   const finishingRef = useRef(false)
   const expectedCloseRef = useRef(false)
   const onCompleteRef = useRef(onComplete)
+  const recordingActiveRef = useRef(false)
 
   const isBusy = status !== 'idle'
+  const isMicLive = readiness === 'mic-live' || readiness === 'stream-open'
+  const isTranscriptStreamReady = readiness === 'stream-open'
+  const isTranscriptStreamPrewarmed = transcriptStreamStatus === 'ready'
   const transcript = appendTranscript(liveTranscript, interimTranscript)
 
   useEffect(() => {
@@ -223,9 +237,13 @@ export function useDictationStream({
 
   const cleanupSession = useCallback(() => {
     socketRef.current?.close()
+    socketRef.current = null
+    recordingActiveRef.current = false
+    setTranscriptStreamStatus('idle')
     stopAudioMeter(false)
     stopDurationTimer(false)
     streamRef.current?.getTracks().forEach((track) => track.stop())
+    setReadiness('idle')
   }, [stopAudioMeter, stopDurationTimer])
 
   useEffect(() => cleanupSession, [cleanupSession])
@@ -251,6 +269,9 @@ export function useDictationStream({
 
     try {
       const audioContext = new AudioContext()
+      if (audioContext.state === 'suspended') {
+        void audioContext.resume().catch(() => undefined)
+      }
       const analyser = audioContext.createAnalyser()
       const source = audioContext.createMediaStreamSource(stream)
 
@@ -333,6 +354,7 @@ export function useDictationStream({
       }
 
       finishingRef.current = true
+      setReadiness('stopping')
       setStatus('stopping')
       const recordedDurationMs = getCurrentDurationMs()
       stopDurationTimer(false)
@@ -340,6 +362,7 @@ export function useDictationStream({
 
       const socket = socketRef.current
       expectedCloseRef.current = true
+      recordingActiveRef.current = false
       await stopRecorder()
       flushAudioChunks(socket)
       stopTracks()
@@ -384,8 +407,10 @@ export function useDictationStream({
       sentChunkCountRef.current = 0
       mimeTypeRef.current = ''
       finishingRef.current = false
+      setTranscriptStreamStatus('idle')
       setRecorderState('inactive')
       stopDurationTimer()
+      setReadiness('idle')
       setStatus('idle')
       setInterimTranscript('')
 
@@ -408,10 +433,151 @@ export function useDictationStream({
     [finishSession],
   )
 
+  const connectTranscriptStream = useCallback(
+    async ({ active }: { active: boolean }) => {
+      const existingSocket = socketRef.current
+
+      if (existingSocket?.readyState === WebSocket.OPEN) {
+        setTranscriptStreamStatus('ready')
+
+        if (active) {
+          flushAudioChunks(existingSocket)
+          setStatus('recording')
+          setReadiness('stream-open')
+        }
+
+        return existingSocket
+      }
+
+      if (existingSocket?.readyState === WebSocket.CONNECTING) {
+        setTranscriptStreamStatus('connecting')
+        return existingSocket
+      }
+
+      try {
+        setTranscriptStreamStatus('connecting')
+        await ensureApiSession()
+
+        const socket = new WebSocket(dictationSocketUrl())
+        socketRef.current = socket
+
+        socket.addEventListener('open', () => {
+          setTranscriptStreamStatus('ready')
+
+          if (!recordingActiveRef.current) return
+
+          try {
+            flushAudioChunks(socket)
+          } catch {
+            handleFailure('Could not send audio to the dictation stream')
+            return
+          }
+
+          setStatus('recording')
+          setReadiness('stream-open')
+        })
+
+        socket.addEventListener('message', (event) => {
+          let message: DeepgramResultMessage
+
+          try {
+            message = JSON.parse(String(event.data)) as DeepgramResultMessage
+          } catch {
+            handleFailure('Received an unreadable dictation message')
+            return
+          }
+
+          if (message.type === 'ProxyError') {
+            handleFailure(message.error ?? 'Deepgram proxy error')
+            return
+          }
+
+          const messageType = message.type ?? 'Unknown'
+          setStreamStats((current) => ({
+            ...current,
+            deepgramMessages: current.deepgramMessages + 1,
+            lastMessageType: messageType,
+          }))
+
+          if (message.type !== 'Results') return
+
+          const messageTranscript =
+            message.channel?.alternatives?.[0]?.transcript ?? ''
+          const hasTranscript = Boolean(messageTranscript.trim())
+          setStreamStats((current) => ({
+            ...current,
+            emptyResults: current.emptyResults + (hasTranscript ? 0 : 1),
+            resultMessages: current.resultMessages + 1,
+            transcriptMessages:
+              current.transcriptMessages + (hasTranscript ? 1 : 0),
+          }))
+          if (!hasTranscript) return
+
+          if (message.is_final || message.speech_final) {
+            finalTranscriptRef.current = appendTranscript(
+              finalTranscriptRef.current,
+              messageTranscript,
+            )
+            interimTranscriptRef.current = ''
+            setLiveTranscript(finalTranscriptRef.current)
+            setInterimTranscript('')
+            return
+          }
+
+          interimTranscriptRef.current = messageTranscript
+          setInterimTranscript(messageTranscript)
+        })
+
+        socket.addEventListener('close', (event) => {
+          setTranscriptStreamStatus('idle')
+          socketRef.current = null
+          setStreamStats((current) => ({
+            ...current,
+            lastMessageType: event.code ? `Closed ${event.code}` : 'Closed',
+          }))
+          if (
+            recordingActiveRef.current &&
+            !finishingRef.current &&
+            !expectedCloseRef.current
+          ) {
+            handleFailure('Dictation stream closed unexpectedly')
+          }
+        })
+
+        socket.addEventListener('error', () => {
+          setTranscriptStreamStatus('idle')
+          if (
+            recordingActiveRef.current &&
+            !finishingRef.current &&
+            !expectedCloseRef.current
+          ) {
+            handleFailure('Could not connect to the dictation stream')
+          }
+        })
+
+        return socket
+      } catch (connectError) {
+        setTranscriptStreamStatus('idle')
+
+        if (active || recordingActiveRef.current) {
+          const message =
+            connectError instanceof Error
+              ? connectError.message
+              : 'Could not connect to the dictation stream'
+          handleFailure(message)
+        }
+
+        return undefined
+      }
+    },
+    [flushAudioChunks, handleFailure],
+  )
+
   const startRecording = useCallback(async () => {
     if (isBusy) return
 
     setStatus('connecting')
+    setReadiness('requesting-mic')
     setError(null)
     setRecorderState('inactive')
     setRmsValue(0)
@@ -425,16 +591,13 @@ export function useDictationStream({
     setStreamStats(initialStreamStats)
     finishingRef.current = false
     expectedCloseRef.current = false
+    recordingActiveRef.current = true
 
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error('Microphone capture is not available in this browser')
       }
 
-      await ensureApiSession()
-
-      const mimeType = chooseRecordingMimeType()
-      mimeTypeRef.current = mimeType || 'audio/webm'
       const audioConstraints: MediaTrackConstraints = {
         echoCancellation: true,
         noiseSuppression: true,
@@ -451,6 +614,10 @@ export function useDictationStream({
 
       streamRef.current = stream
       startAudioMeter(stream)
+      setReadiness('mic-live')
+
+      const mimeType = chooseRecordingMimeType()
+      mimeTypeRef.current = mimeType || 'audio/webm'
 
       const recorder = new MediaRecorder(
         stream,
@@ -481,86 +648,7 @@ export function useDictationStream({
       recorder.start(250)
       setRecorderState(recorder.state as RecorderState)
       startDurationTimer()
-
-      const socket = new WebSocket(dictationSocketUrl())
-      socketRef.current = socket
-
-      socket.addEventListener('open', () => {
-        try {
-          flushAudioChunks(socket)
-        } catch {
-          handleFailure('Could not send audio to the dictation stream')
-          return
-        }
-        setStatus('recording')
-      })
-
-      socket.addEventListener('message', (event) => {
-        let message: DeepgramResultMessage
-
-        try {
-          message = JSON.parse(String(event.data)) as DeepgramResultMessage
-        } catch {
-          handleFailure('Received an unreadable dictation message')
-          return
-        }
-
-        if (message.type === 'ProxyError') {
-          handleFailure(message.error ?? 'Deepgram proxy error')
-          return
-        }
-
-        const messageType = message.type ?? 'Unknown'
-        setStreamStats((current) => ({
-          ...current,
-          deepgramMessages: current.deepgramMessages + 1,
-          lastMessageType: messageType,
-        }))
-
-        if (message.type !== 'Results') return
-
-        const messageTranscript =
-          message.channel?.alternatives?.[0]?.transcript ?? ''
-        const hasTranscript = Boolean(messageTranscript.trim())
-        setStreamStats((current) => ({
-          ...current,
-          emptyResults: current.emptyResults + (hasTranscript ? 0 : 1),
-          resultMessages: current.resultMessages + 1,
-          transcriptMessages:
-            current.transcriptMessages + (hasTranscript ? 1 : 0),
-        }))
-        if (!hasTranscript) return
-
-        if (message.is_final || message.speech_final) {
-          finalTranscriptRef.current = appendTranscript(
-            finalTranscriptRef.current,
-            messageTranscript,
-          )
-          interimTranscriptRef.current = ''
-          setLiveTranscript(finalTranscriptRef.current)
-          setInterimTranscript('')
-          return
-        }
-
-        interimTranscriptRef.current = messageTranscript
-        setInterimTranscript(messageTranscript)
-      })
-
-      socket.addEventListener('close', (event) => {
-        setStreamStats((current) => ({
-          ...current,
-          lastMessageType: event.code ? `Closed ${event.code}` : 'Closed',
-        }))
-        if (!finishingRef.current && !expectedCloseRef.current) {
-          handleFailure('Dictation stream closed unexpectedly')
-        }
-      })
-
-      socket.addEventListener('error', () => {
-        if (!finishingRef.current && !expectedCloseRef.current) {
-          handleFailure('Could not connect to the dictation stream')
-        }
-      })
+      void connectTranscriptStream({ active: true })
     } catch (startError) {
       const message =
         startError instanceof Error
@@ -577,6 +665,8 @@ export function useDictationStream({
 
       stopTracks()
       stopDurationTimer()
+      setReadiness('idle')
+      recordingActiveRef.current = false
       setStatus('idle')
     }
   }, [
@@ -585,6 +675,7 @@ export function useDictationStream({
     handleFailure,
     isBusy,
     selectedDeviceId,
+    connectTranscriptStream,
     startAudioMeter,
     startDurationTimer,
     stopDurationTimer,
@@ -603,16 +694,27 @@ export function useDictationStream({
     setDurationMs(0)
     setRmsValue(0)
     setStreamStats(initialStreamStats)
+    setReadiness('idle')
     finalTranscriptRef.current = ''
     interimTranscriptRef.current = ''
   }, [])
+
+  const preconnectStream = useCallback(async () => {
+    if (isBusy) return
+    await connectTranscriptStream({ active: false })
+  }, [connectTranscriptStream, isBusy])
 
   return {
     durationMs,
     error,
     interimTranscript,
     isBusy,
+    isMicLive,
+    isTranscriptStreamReady,
+    isTranscriptStreamPrewarmed,
     liveTranscript,
+    preconnectStream,
+    readiness,
     recorderState,
     resetSession,
     rmsValue,
@@ -621,5 +723,6 @@ export function useDictationStream({
     stopRecording,
     streamStats,
     transcript,
+    transcriptStreamStatus,
   }
 }

@@ -1341,6 +1341,22 @@ textarea:focus-visible {
   transition: background 120ms linear;
 }
 
+.voice-orbit.loading .voice-level-ring {
+  background:
+    radial-gradient(circle, var(--bg) 58%, transparent 59%),
+    conic-gradient(
+      from 90deg,
+      rgb(128 176 232 / 18%),
+      var(--blue),
+      rgb(128 176 232 / 18%)
+    );
+  animation: recorder-spin 900ms linear infinite;
+}
+
+.voice-orbit.mic-live .voice-level-ring {
+  filter: drop-shadow(0 12px 30px rgb(128 176 232 / 28%));
+}
+
 .voice-recorder-btn {
   width: 86px;
   height: 86px;
@@ -1357,6 +1373,14 @@ textarea:focus-visible {
   padding: 0;
 }
 
+.voice-recorder-btn.loading {
+  cursor: wait;
+  background:
+    radial-gradient(circle at 50% 42%, #fff 0 20%, transparent 21%),
+    linear-gradient(145deg, #f5f0e8, #80b0e8);
+  animation: recorder-breathe 900ms ease-in-out infinite;
+}
+
 .voice-recorder-btn:hover {
   transform: translateY(-2px) scale(1.03);
 }
@@ -1364,6 +1388,17 @@ textarea:focus-visible {
 .voice-recorder-btn:disabled {
   cursor: wait;
   opacity: 0.72;
+}
+
+.voice-recorder-btn.loading .voice-recorder-icon {
+  width: 26px;
+  height: 26px;
+  border: 3px solid rgb(44 62 53 / 18%);
+  border-top-color: var(--fg);
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  animation: recorder-spin 720ms linear infinite;
 }
 
 .voice-recorder-btn.recording {
@@ -1384,6 +1419,28 @@ textarea:focus-visible {
   width: 22px;
   height: 22px;
   border-radius: 6px;
+}
+
+.voice-recorder-btn.connecting-stream {
+  background:
+    radial-gradient(circle at 50% 50%, #fff 0 15%, transparent 16%),
+    linear-gradient(145deg, #80b0e8, #f2d06b);
+}
+
+@keyframes recorder-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes recorder-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
 }
 
 .cat-agent-transcript.live {
